@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sandip Sapkota | Portfolio</title>
+    <meta
+      name="description"
+      content="YatraNepal is a live demo web application that displays real-time locations and routes of public vehicles in Kathmandu, Nepal. Users can view active routes, track vehicle positions on an interactive map, and search for destinations." />
+    <meta
+      name="keywords"
+      content="Portfolio, {{YOUR_NAME}}, {{SKILL_1}}, {{SKILL_2}}, {{SKILL_3}}" />
+    <meta name="author" content="{{YOUR_NAME}}" />
+    <link rel="icon" href="favicon.ico" type="image/x-icon" />
+    <!-- Open Graph / SEO -->
+    <meta property="og:title" content="{{YOUR_NAME}} Portfolio" />
+    <meta property="og:description" content="{{TAGLINE}}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="yatra-nepal-preview.png" />
+    <meta property="og:url" content="{{PORTFOLIO_URL}}" />
+    <link rel="stylesheet" href="portfolio.css" />
+    <script defer src="portfolio.js"></script>
+  </head>
+  <body>
+    <!-- Preloader -->
+    <div id="preloader" aria-label="Loading" role="status">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Navbar -->
+    <header>
+      <nav class="navbar" aria-label="Main Navigation">
+        <div class="nav-logo">Sandip Sapkota</div>
+        <button
+          class="nav-toggle"
+          aria-label="Open navigation menu"
+          aria-expanded="false">
+          <span class="hamburger"></span>
+        </button>
+        <ul class="nav-links">
+          <li><a href="#hero" class="nav-link">Home</a></li>
+          <li><a href="#about" class="nav-link">About</a></li>
+          <li><a href="#skills" class="nav-link">Skills</a></li>
+          <li><a href="#projects" class="nav-link">Projects</a></li>
+          <li><a href="#experience" class="nav-link">Experience</a></li>
+          <li><a href="#contact" class="nav-link">Contact</a></li>
+        </ul>
+        <button class="theme-toggle" aria-label="Toggle light/dark mode">
+          <span class="theme-icon"></span>
+        </button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- Hero Section -->
+      <section id="hero" class="section hero" tabindex="-1">
+        <div class="hero-content">
+          <h1 class="hero-title">Sandip Sapkota</h1>
+          <p class="hero-tagline">Think. Code. Launch.</p>
+          <a href="#contact" class="btn cta-btn">Get In Touch</a>
+        </div>
+        <div class="hero-bg"></div>
+      </section>
+
+      <!-- About Section -->
+      <section id="about" class="section about" tabindex="-1">
+        <div class="about-container">
+          <div class="about-img" aria-label="Profile image placeholder">
+            <img
+              src="c:/Users/ASUS/Documents/codes/html folders/Portfolio website/images/profile pic.jpeg"
+              alt="Profile image " />
+          </div>
+          <div class="about-text">
+            <h2>About Me</h2>
+            <p>
+              Hello, I’m <strong>Sandip Sapkota</strong>, a dedicated
+              <strong>BSc.IT student</strong> with a strong passion for
+              technology, problem-solving, and continuous learning. I have
+              hands-on experience working as a
+              <strong>project manager and freelancer</strong>, where I have
+              developed practical skills in managing projects, meeting client
+              requirements, and delivering quality results on time.
+            </p>
+
+            <p>
+              My expertise includes
+              <strong
+                >web development, hosting and deployment, Python, .NET, MySQL,
+                Cisco Packet Tracer, transcription, and video editing</strong
+              >. I enjoy working on diverse technical projects that allow me to
+              combine creativity with technical knowledge, whether it is
+              building websites, managing databases, configuring networks, or
+              creating digital content.
+            </p>
+
+            <p>
+              My career goal is to grow as a
+              <strong>freelancer and remote worker</strong> while building a
+              successful career in the <strong>IT field</strong>. I am always
+              eager to learn new technologies, improve my skills, and contribute
+              to innovative projects that create real-world impact.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Skills Section -->
+      <section id="skills" class="section skills" tabindex="-1">
+        <h2>Skills</h2>
+        <div class="skills-list">
+          <div class="skill-card">HTML</div>
+          <div class="skill-card">CSS</div>
+          <div class="skill-card">JS</div>
+          <div class="skill-card">Python</div>
+          <div class="skill-card">.NET</div>
+          <div class="skill-card">SQL</div>
+          <div class="skill-card">Git</div>
+          <div class="skill-card">Cisco Packet Tracer</div>
+          <div class="skill-card">Github</div>
+          <div class="skill-card">Vibe Coding</div>
+          <div class="skill-card">Prompt Engineering</div>
+          <div class="skill-card">Web hosting/Deployement</div>
+        </div>
+      </section>
+
+      <!-- Projects Section -->
+      <section id="projects" class="section projects" tabindex="-1">
+        <h2>Projects</h2>
+        <div class="projects-filter">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="web">Web</button>
+          <button class="filter-btn" data-filter="app">App</button>
+          <button class="filter-btn" data-filter="other">Other</button>
+        </div>
+        <div class="projects-list">
+          <!-- YatraNepal Website -->
+          <div class="project-card" data-category="web">
+            <img
+              src="c:/Users/ASUS/Documents/codes/html folders/Portfolio website/images/yatraNepalPreview.png"
+              alt="YatraNepal Live Public Vehicle Tracking Preview"
+              class="project-img" />
+            <div class="project-info">
+              <h3>YatraNepal Website</h3>
+              <p>
+                A live demo web application that displays real-time locations
+                and routes of public vehicles in Kathmandu, Nepal. Users can
+                view active routes, track vehicle positions on an interactive
+                map, and search for destinations. Built with Leaflet and
+                OpenStreetMap.
+              </p>
+              <a
+                href="https://yatranepal-2.onrender.com/"
+                class="btn project-link"
+                target="_blank"
+                rel="noopener"
+                >View Live Demo</a
+              >
+            </div>
+          </div>
+          <!-- Portfolio Website -->
+          <div class="project-card" data-category="web">
+            <img
+              src="https://via.placeholder.com/300x180?text=Portfolio"
+              alt="Portfolio Website"
+              class="project-img" />
+            <div class="project-info">
+              <h3>Portfolio Website</h3>
+              <p>
+                Personal portfolio website to showcase projects, skills, and
+                experience. Built with HTML, CSS, and JavaScript.
+              </p>
+              <a
+                href="https://sandipsapkota001.com.np"
+                class="btn project-link"
+                target="_blank"
+                rel="noopener"
+                >View Project</a
+              >
+            </div>
+          </div>
+
+          <!-- TicTacToe Terminal Game -->
+          <div class="project-card" data-category="app">
+            <img
+              src="https://via.placeholder.com/300x180?text=TicTacToe+Python"
+              alt="TicTacToe Python"
+              class="project-img" />
+            <div class="project-info">
+              <h3>TicTacToe (Terminal, Python)</h3>
+              <p>
+                Classic TicTacToe game implemented as a terminal-based Python
+                program. Includes unit tests with pytest.
+              </p>
+              <a
+                href="https://github.com/sandipsapkota/tictactoe-python"
+                class="btn project-link"
+                target="_blank"
+                rel="noopener"
+                >View Code</a
+              >
+            </div>
+          </div>
+
+          <!-- Employee Management System Terminal App -->
+          <div class="project-card" data-category="app">
+            <img
+              src="https://via.placeholder.com/300x180?text=Employee+Mgmt+Python"
+              alt="Employee Management System Python"
+              class="project-img" />
+            <div class="project-info">
+              <h3>Employee Management System (Terminal, Python)</h3>
+              <p>
+                Terminal-based employee management system in Python for managing
+                employee records, with full pytest test coverage.
+              </p>
+              <a
+                href="https://github.com/sandipsapkota/employee-management-python"
+                class="btn project-link"
+                target="_blank"
+                rel="noopener"
+                >View Code</a
+              >
+            </div>
+          </div>
+          <!-- ...existing code... -->
+        </div>
+      </section>
+
+      <!-- Experience / Timeline Section -->
+      <section id="experience" class="section experience" tabindex="-1">
+        <h2>Experience</h2>
+        <div class="timeline">
+          <!-- Example timeline entry -->
+          <div class="timeline-entry">
+            <div class="timeline-dot"></div>
+            <div class="timeline-content">
+              <h3>Portfolio & Project Deployment</h3>
+              <span class="timeline-date">2025 - Present</span>
+              <p>
+                Deployed portfolio and YatraNepal website to custom domains
+                using reliable hosting providers. Configured DNS, SSL, and CI/CD
+                for seamless updates. Domains:
+                <a href="https://sandipsapkota001.com.np" target="_blank"
+                  >sandipsapkota001.com.np</a
+                >
+              </p>
+            </div>
+          </div>
+          <!-- Additional experience entries can be added below -->
+        </div>
+      </section>
+
+      <!-- Contact Section -->
+      <section id="contact" class="section contact" tabindex="-1">
+        <h2>Contact</h2>
+        <div class="contact-container">
+          <form class="contact-form" autocomplete="off" novalidate>
+            <div class="form-group">
+              <label for="name">Name</label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                required
+                placeholder="Your Name" />
+              <span class="form-error"></span>
+            </div>
+            <div class="form-group">
+              <label for="email">Email</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                required
+                placeholder="Your Email" />
+              <span class="form-error"></span>
+            </div>
+            <div class="form-group">
+              <label for="message">Message</label>
+              <textarea
+                id="message"
+                name="message"
+                required
+                placeholder="Your Message"></textarea>
+              <span class="form-error"></span>
+            </div>
+            <button type="submit" class="btn submit-btn">Send Message</button>
+          </form>
+          <div class="contact-info">
+            <p>
+              <strong>Email:</strong>
+              <a href="mailto:spktasandip001@gmail.com"
+                >spktasandip001@gmail.com</a
+              >
+            </p>
+            <p>
+              <strong>Phone:</strong>
+              <a href="tel:+977 9766876541">+977 9766876541</a>
+            </p>
+            <div class="social-links">
+              <a
+                href="https://github.com/Sandip-1-1"
+                class="social-icon"
+                aria-label="Social 1"
+                target="_blank"
+                rel="noopener"
+                ><span class="iconify" data-icon="mdi:github"></span
+              ></a>
+              <a
+                href="https://www.linkedin.com/in/sandip-sapkota-7b23533ba"
+                class="social-icon"
+                aria-label="Social 2"
+                target="_blank"
+                rel="noopener"
+                ><span class="iconify" data-icon="mdi:linkedin"></span
+              ></a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Scroll to Top Button -->
+    <button id="scrollToTop" aria-label="Scroll to top">
+      <span>&uarr;</span>
+    </button>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-content">
+        <span
+          >&copy; <span id="year"></span> {{YOUR_NAME}}. All rights
+          reserved.</span
+        >
+        <div class="footer-social">
+          <a
+            href="{{SOCIAL_LINK_1}}"
+            class="social-icon"
+            aria-label="GitHub"
+            target="_blank"
+            rel="noopener"
+            ><span class="iconify" data-icon="mdi:github"></span
+          ></a>
+          <a
+            href="{{SOCIAL_LINK_2}}"
+            class="social-icon"
+            aria-label="LinkedIn"
+            target="_blank"
+            rel="noopener"
+            ><span class="iconify" data-icon="mdi:linkedin"></span
+          ></a>
+          <a
+            href="{{SOCIAL_LINK_3}}"
+            class="social-icon"
+            aria-label="Twitter"
+            target="_blank"
+            rel="noopener"
+            ><span class="iconify" data-icon="mdi:twitter"></span
+          ></a>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Iconify for social icons -->
+    <script
+      src="https://code.iconify.design/3/3.1.0/iconify.min.js"
+      defer></script>
+  </body>
+</html>
