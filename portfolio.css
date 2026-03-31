@@ -24,7 +24,7 @@
   --color-focus: #ffb347;
   --color-blur: rgba(0, 0, 0, 0.08);
   --color-shadow-focus: 0 4px 24px 0 rgba(79, 140, 255, 0.18);
-  --font-main: "Inter", Arial, sans-serif;
+  --font-main: "Poppins", Arial, sans-serif;
   --font-mono: "Fira Mono", monospace;
   --radius: 1.2rem;
   --transition: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
