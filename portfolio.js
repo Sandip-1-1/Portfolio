@@ -180,9 +180,43 @@ if (contactForm) {
       }
     });
     if (valid) {
-      // Simulate successful submission
-      contactForm.reset();
-      alert("Thank you for your message!");
+      const endpoint = contactForm.getAttribute("action");
+      if (!endpoint || endpoint.includes("YOUR_FORM_ID")) {
+        alert("Set a real form endpoint first, then the message can be sent.");
+        return;
+      }
+
+      const submitBtn = contactForm.querySelector(".submit-btn");
+      const originalLabel = submitBtn ? submitBtn.textContent : "";
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Sending...";
+      }
+
+      fetch(endpoint, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+        },
+        body: new FormData(contactForm),
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Message could not be sent.");
+          }
+          contactForm.reset();
+          alert("Your message was sent successfully.");
+        })
+        .catch(() => {
+          alert("Message could not be sent. Please try again later.");
+        })
+        .finally(() => {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalLabel;
+          }
+        });
     }
   });
 }
