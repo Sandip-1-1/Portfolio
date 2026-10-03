@@ -10,11 +10,11 @@ export const destinations: Destination[] = [
 
 export const projects: Project[] = [
   {
-    id: "yatranepal", title: "YatraNepal", type: "Full-stack · Real-time transit", status: "Live",
+    id: "yatranepal", title: "YatraNepal", type: "Full-stack · Real-time transit", status: "Source available",
     summary: "A real-time public transportation tracker for Kathmandu Valley, built around live vehicle positions and practical route discovery.",
     details: ["Broadcasts vehicle positions over WebSocket every three seconds along real road geometry via OSRM.", "Combines OpenStreetMap and satellite layers, Nominatim search, route filtering, traffic overlays, ETAs, and proximity notifications.", "Models routes from four real Kathmandu Valley transit operators."],
     technologies: ["React", "TypeScript", "Node.js", "PostgreSQL", "Drizzle ORM", "WebSocket", "Leaflet", "OSRM"],
-    image: "./images/yatraNepalPreview.webp", liveUrl: "https://yatranepal-2.onrender.com/",
+    image: "./images/yatraNepalPreview.webp", codeUrl: "https://github.com/Sandip-1-1/YatraNepal",
   },
   {
     id: "tictactoe", title: "Tic-Tac-Toe AI", type: "Python · Game AI", status: "Case study",

@@ -16,7 +16,7 @@ export interface Project {
   id: string;
   title: string;
   type: string;
-  status?: "Live" | "Case study" | "In development";
+  status?: "Live" | "Source available" | "Case study" | "In development";
   summary: string;
   details: string[];
   technologies: string[];
@@ -29,7 +29,7 @@ export interface SkillGroup { title: string; skills: string[]; evidence: string;
 export interface TimelineEntry { period: string; title: string; place?: string; description: string; }
 export interface DialogueNode { id: string; speaker: string; message: string; options?: DestinationId[]; }
 export interface NavigationState { current: DestinationId; visited: DestinationId[]; mode: VisitMode; }
-export interface UserPreferences { theme: ThemeMode; sound: boolean; reducedEffects: boolean; returning: boolean; lastVisited: DestinationId; visited: DestinationId[]; }
+export interface UserPreferences { theme: ThemeMode; sound: boolean; reducedEffects: boolean; returning: boolean; lastVisited: DestinationId; visited: DestinationId[]; musicVolume: number; natureVolume: number; sfxVolume: number; }
 
 export interface GameEvents {
   enter: { destination: DestinationId; source: "portal" | "teleport" };

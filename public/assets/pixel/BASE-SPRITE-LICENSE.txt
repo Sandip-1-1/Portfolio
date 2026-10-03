@@ -1,0 +1,8 @@
+16x16 base sprites by Unnamed
+Source: https://opengameart.org/content/16x16-base-sprites
+Original file: base_male.png
+License: Creative Commons Zero v1.0 Universal (CC0 1.0)
+License text: https://creativecommons.org/publicdomain/zero/1.0/legalcode
+
+The customized sandip-sprite.png and sandip-portrait.png are derivative pixel
+art created for this portfolio from the CC0 base.

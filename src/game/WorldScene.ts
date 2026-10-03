@@ -3,151 +3,205 @@ import { destinations } from "../content";
 import type { DestinationId, ThemeMode } from "../types";
 import { gameEvents } from "./events";
 
-const WORLD_W = 1400;
-const WORLD_H = 960;
+const TILE = 16;
+type Direction = "south" | "southwest" | "west" | "northwest" | "north" | "northeast" | "east" | "southeast";
+type Point = { x: number; y: number };
+type Interaction = { kind: "portal"; destination: DestinationId; x: number; y: number };
+const directions: Direction[] = ["south", "southwest", "west", "northwest", "north", "northeast", "east", "southeast"];
 
 export class WorldScene extends Phaser.Scene {
-  private player!: Phaser.GameObjects.Container;
-  private target?: Phaser.Math.Vector2;
+  private map?: Phaser.Tilemaps.Tilemap;
+  private player!: Phaser.Physics.Arcade.Sprite;
+  private collisionLayer?: Phaser.Tilemaps.TilemapLayer;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
-  private nearest: DestinationId | null = null;
-  private nightOverlay!: Phaser.GameObjects.Rectangle;
+  private blocked: boolean[][] = [];
+  private interactions: Interaction[] = [];
+  private nearby: Interaction | null = null;
+  private path: Point[] = [];
+  private facing: Direction = "south";
+  private transitioning = false;
   private reducedEffects = false;
+  private nightOverlay?: Phaser.GameObjects.Rectangle;
 
   constructor() { super("world"); }
 
   preload() {
-    this.load.image("world-map", "./assets/village-world.webp");
-    this.load.image("avatar", "./assets/sandip-avatar.webp");
+    const root = "./assets/pixel";
+    this.load.image("outdoor-tiles", `${root}/Forchild/BasicVillageTileset/Outdoor_tileset.png`);
+    this.load.image("house-tiles", `${root}/Forchild/BasicVillageTileset/House_tileset.png`);
+    this.load.image("furniture-tiles", `${root}/Forchild/BasicVillageTileset/Furniture.png`);
+    this.load.image("trees-tiles", `${root}/Forchild/BasicVillageTileset/Trees_and_bushes.png`);
+    this.load.spritesheet("house-sprites", `${root}/Forchild/BasicVillageTileset/House_tileset.png`, { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet("furniture-sprites", `${root}/Forchild/BasicVillageTileset/Furniture.png`, { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet("sandip", `${root}/sandip-eight-direction.png`, { frameWidth: 32, frameHeight: 48 });
+    this.load.tilemapTiledJSON("map-village", `${root}/maps/village.tmj`);
   }
 
   create() {
-    this.cameras.main.setBounds(0, 0, WORLD_W, WORLD_H);
-    this.drawFallbackWorld();
-    if (this.textures.exists("world-map")) {
-      const map = this.add.image(WORLD_W / 2, WORLD_H / 2, "world-map").setDisplaySize(WORLD_W, WORLD_H).setDepth(-5);
-      map.setAlpha(0.96);
-    }
-    this.drawPortalNetwork();
-    this.player = this.createPlayer(700, 610);
-    this.cameras.main.startFollow(this.player, true, 0.075, 0.075);
-    this.cameras.main.setZoom(Math.min(1, Math.max(0.72, this.scale.width / 1200)));
+    this.createAnimations();
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.keys = this.input.keyboard!.addKeys("W,A,S,D,E,ENTER") as Record<string, Phaser.Input.Keyboard.Key>;
-    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-      const worldPoint = pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2;
-      this.target = new Phaser.Math.Vector2(worldPoint.x, worldPoint.y);
-    });
-    this.nightOverlay = this.add.rectangle(WORLD_W / 2, WORLD_H / 2, WORLD_W, WORLD_H, 0x07152f, 0).setDepth(90).setBlendMode(Phaser.BlendModes.MULTIPLY);
+    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => this.handlePointer(pointer));
+    this.buildVillage();
     this.events.on("set-theme", (theme: ThemeMode, amount: number) => this.applyTheme(theme, amount));
-    this.events.on("teleport", (id: DestinationId) => this.teleport(id));
+    this.events.on("travel-to", (destination: DestinationId) => this.travelTo(destination));
+    this.events.on("return-village", () => this.returnToCenter());
     this.events.on("reduced-effects", (value: boolean) => { this.reducedEffects = value; });
-    this.scale.on("resize", () => this.cameras.main.setZoom(Math.min(1, Math.max(0.68, this.scale.width / 1200))));
   }
 
-  private drawFallbackWorld() {
-    const g = this.add.graphics().setDepth(-10);
-    g.fillGradientStyle(0x295848, 0x295848, 0x183b3a, 0x183b3a, 1);
-    g.fillRect(0, 0, WORLD_W, WORLD_H);
-    g.fillStyle(0x9f8a63, 0.55);
-    g.fillRoundedRect(600, 50, 200, 860, 80);
-    g.fillRoundedRect(80, 420, 1240, 150, 70);
-    g.lineStyle(4, 0xe6c47c, 0.22);
-    for (let i = 0; i < 9; i += 1) g.strokeEllipse(700, 500, 170 + i * 36, 90 + i * 18);
-  }
-
-  private drawPortalNetwork() {
-    destinations.forEach((destination) => {
-      const { x, y } = destination.position;
-      const ring = this.add.ellipse(x, y + 55, 108, 48, Phaser.Display.Color.HexStringToColor(destination.accent).color, 0.28).setDepth(9);
-      this.tweens.add({ targets: ring, scaleX: 1.18, scaleY: 1.18, alpha: 0.08, duration: 1600, yoyo: true, repeat: -1, delay: destinations.indexOf(destination) * 170 });
-      const portal = this.add.graphics().setDepth(8);
-      portal.fillStyle(0x071d26, 0.82).fillRoundedRect(x - 42, y - 20, 84, 84, 22);
-      portal.lineStyle(4, Phaser.Display.Color.HexStringToColor(destination.accent).color, 0.92).strokeRoundedRect(x - 42, y - 20, 84, 84, 22);
-      this.add.text(x, y - 56, destination.worldName, { fontFamily: "system-ui, sans-serif", fontSize: "18px", fontStyle: "bold", color: "#fff7df", backgroundColor: "#071d26dd", padding: { x: 12, y: 7 }, align: "center" }).setOrigin(0.5).setDepth(12);
-      this.add.text(x, y - 30, destination.title.toUpperCase(), { fontFamily: "system-ui, sans-serif", fontSize: "12px", color: destination.accent, letterSpacing: 2 }).setOrigin(0.5).setDepth(12);
-    });
-  }
-
-  private createPlayer(x: number, y: number) {
-    const container = this.add.container(x, y).setDepth(30);
-    if (this.textures.exists("avatar")) {
-      container.add(this.add.image(0, -45, "avatar").setDisplaySize(94, 122));
-    } else {
-      const avatar = this.add.graphics();
-      avatar.fillStyle(0xf0c9a4).fillCircle(0, -66, 16);
-      avatar.fillStyle(0x612e3f).fillRoundedRect(-22, -50, 44, 58, 14);
-      avatar.fillStyle(0x17252b).fillRect(-18, 5, 13, 34).fillRect(5, 5, 13, 34);
-      container.add(avatar);
-    }
-    const shadow = this.add.ellipse(0, 35, 58, 22, 0x000000, 0.28).setDepth(-1);
-    container.addAt(shadow, 0);
-    return container;
-  }
-
-  update(_time: number, delta: number) {
-    if (!this.player || !this.cursors) return;
-    const speed = 235 * (delta / 1000);
-    let dx = 0; let dy = 0;
-    if (this.cursors.left.isDown || this.keys.A.isDown) dx -= 1;
-    if (this.cursors.right.isDown || this.keys.D.isDown) dx += 1;
-    if (this.cursors.up.isDown || this.keys.W.isDown) dy -= 1;
-    if (this.cursors.down.isDown || this.keys.S.isDown) dy += 1;
+  update() {
+    if (!this.player?.body || this.transitioning) return;
+    let dx = Number(this.cursors.right.isDown || this.keys.D.isDown) - Number(this.cursors.left.isDown || this.keys.A.isDown);
+    let dy = Number(this.cursors.down.isDown || this.keys.S.isDown) - Number(this.cursors.up.isDown || this.keys.W.isDown);
     if (dx || dy) {
-      this.target = undefined;
-      const length = Math.hypot(dx, dy);
-      this.movePlayer((dx / length) * speed, (dy / length) * speed);
-    } else if (this.target) {
-      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.target.x, this.target.y);
-      if (distance < 8) this.target = undefined;
-      else {
-        const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, this.target.x, this.target.y);
-        this.movePlayer(Math.cos(angle) * speed, Math.sin(angle) * speed);
-      }
-    }
-    this.checkProximity();
-    if ((Phaser.Input.Keyboard.JustDown(this.keys.E) || Phaser.Input.Keyboard.JustDown(this.keys.ENTER)) && this.nearest) {
-      gameEvents.emit("enter", { destination: this.nearest, source: "portal" });
-    }
+      this.path = [];
+      const length = Math.hypot(dx, dy); dx /= length; dy /= length;
+      this.move(dx * 96, dy * 96);
+    } else if (this.path.length) {
+      const node = this.path[0], tx = node.x * TILE + 8, ty = node.y * TILE + 8;
+      if (Phaser.Math.Distance.Between(this.player.x, this.player.y, tx, ty) < 3) { this.path.shift(); this.player.setPosition(tx, ty); }
+      if (this.path.length) { const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, tx, ty); this.move(Math.cos(angle) * 82, Math.sin(angle) * 82); } else this.stop();
+    } else this.stop();
+    this.updateInteraction();
+    if ((Phaser.Input.Keyboard.JustDown(this.keys.E) || Phaser.Input.Keyboard.JustDown(this.keys.ENTER)) && this.nearby) this.activate(this.nearby);
+    gameEvents.emit("player-state", { tile: this.worldToTile(this.player.x, this.player.y), facing: this.facing, moving: this.player.body.velocity.lengthSq() > 1 });
   }
 
-  private movePlayer(dx: number, dy: number) {
-    this.player.x = Phaser.Math.Clamp(this.player.x + dx, 72, WORLD_W - 72);
-    this.player.y = Phaser.Math.Clamp(this.player.y + dy, 95, WORLD_H - 65);
-    this.player.setDepth(30 + this.player.y / WORLD_H);
-  }
-
-  private checkProximity() {
-    let next: DestinationId | null = null;
-    let min = 112;
-    destinations.forEach((d) => {
-      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, d.position.x, d.position.y + 50);
-      if (distance < min) { min = distance; next = d.id; }
+  private createAnimations() {
+    directions.forEach((direction, row) => {
+      if (!this.anims.exists(`walk-${direction}`)) this.anims.create({ key: `walk-${direction}`, frames: this.anims.generateFrameNumbers("sandip", { start: row * 7 + 1, end: row * 7 + 6 }), frameRate: 9, repeat: -1 });
     });
-    if (next !== this.nearest) {
-      this.nearest = next;
-      gameEvents.emit("proximity", { destination: next });
-    }
+    if (!this.anims.exists("wave-south")) this.anims.create({ key: "wave-south", frames: this.anims.generateFrameNumbers("sandip", { start: 56, end: 59 }), frameRate: 6, repeat: 1 });
   }
 
-  private teleport(id: DestinationId) {
-    const destination = destinations.find((item) => item.id === id);
-    if (!destination) return;
-    const arrive = () => {
-      this.player.setPosition(destination.position.x, destination.position.y + 72);
-      this.cameras.main.centerOn(destination.position.x, destination.position.y);
-      gameEvents.emit("enter", { destination: id, source: "teleport" });
-    };
-    if (this.reducedEffects) { arrive(); return; }
-    this.tweens.add({ targets: this.player, alpha: 0, scale: 0.2, angle: 180, duration: 360, ease: "Cubic.In", onComplete: () => {
-      arrive();
-      this.tweens.add({ targets: this.player, alpha: 1, scale: 1, angle: 0, duration: 480, ease: "Back.Out" });
-    }});
+  private buildVillage() {
+    this.children.removeAll(true);
+    this.physics.world.colliders.destroy();
+    this.path = []; this.nearby = null; this.interactions = [];
+    this.map = this.make.tilemap({ key: "map-village" });
+    const sets = [
+      this.map.addTilesetImage("Outdoor", "outdoor-tiles"), this.map.addTilesetImage("House", "house-tiles"),
+      this.map.addTilesetImage("Furniture", "furniture-tiles"), this.map.addTilesetImage("Trees", "trees-tiles"),
+    ].filter(Boolean) as Phaser.Tilemaps.Tileset[];
+    const ground = this.map.createLayer("ground", sets, 0, 0)?.setDepth(-30);
+    this.map.createLayer("decoration", sets, 0, 0)?.setDepth(-20);
+    this.collisionLayer = this.map.createLayer("collision", sets, 0, 0)?.setVisible(false).setCollisionByExclusion([-1]);
+    this.map.createLayer("portal", sets, 0, 0)?.setDepth(-5);
+    this.map.createLayer("spawn", sets, 0, 0)?.setVisible(false);
+    this.map.createLayer("interaction", sets, 0, 0)?.setVisible(false);
+    this.map.createLayer("above-player", sets, 0, 0)?.setDepth(1200);
+    if (!ground || !this.collisionLayer) throw new Error("Required Tiled layers are missing in village");
+    this.blocked = this.collisionLayer.layer.data.map((row) => row.map((tile) => tile.index !== -1));
+    this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
+    this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels).setRoundPixels(true);
+    this.buildVillageObjects();
+    const spawn = this.findMarkedTile("spawn") ?? { x: Math.floor(this.map.width / 2), y: Math.floor(this.map.height / 2) };
+    this.createPlayer(spawn.x * TILE + 8, spawn.y * TILE + 8);
+    gameEvents.emit("proximity", { interaction: null });
+    gameEvents.emit("location-changed", { location: "village" });
+    this.player.anims.play("wave-south");
+    this.player.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this.stop());
   }
 
-  private applyTheme(theme: ThemeMode, amount: number) {
-    const alpha = theme === "day" ? 0 : theme === "night" ? 0.56 : 0.56 * amount;
-    this.tweens.add({ targets: this.nightOverlay, alpha, duration: this.reducedEffects ? 80 : 900 });
+  private buildVillageObjects() {
+    const wall = this.add.graphics().setDepth(15);
+    const points = [[32,3],[59,18],[50,44],[14,44],[5,18]].map(([x,y]) => new Phaser.Math.Vector2(x*TILE+8,y*TILE+8));
+    wall.lineStyle(16,0x2a1c21,1).strokePoints(points,true);
+    wall.lineStyle(10,0x8c6a50,1).strokePoints(points,true);
+    wall.lineStyle(3,0xd8b77a,1).strokePoints(points,true);
+    this.add.text(32*TILE+8,24*TILE-30,"CENTRAL WAYPOINT",this.textStyle(11,"#fff1b8","#17231fee")).setOrigin(.5).setDepth(900);
+    const objects = this.map!.getObjectLayer("buildings")?.objects ?? [];
+    objects.forEach((object) => {
+      const destination = this.property(object,"destination") as DestinationId;
+      const title = String(this.property(object,"title"));
+      const worldName = String(this.property(object,"worldName"));
+      const doorX = Number(this.property(object,"doorX"));
+      const doorY = Number(this.property(object,"doorY"));
+      const doorAngle = Number(this.property(object,"doorAngle"));
+      this.renderBuilding(object.x!,object.y!,object.rotation ?? 0,destination,title,worldName,doorX,doorY,doorAngle);
+      this.interactions.push({ kind:"portal", destination, x:doorX, y:doorY });
+    });
   }
+
+  private renderBuilding(x:number,y:number,rotation:number,id:DestinationId,title:string,worldName:string,doorX:number,doorY:number,doorAngle:number) {
+    const destination = destinations.find((item)=>item.id===id)!;
+    const accent = Phaser.Display.Color.HexStringToColor(destination.accent).color;
+    const c = this.add.container(x,y).setAngle(rotation).setDepth(y+45);
+    const shell = this.add.graphics();
+    shell.fillStyle(0x2a1d20).fillRect(-88,-34,176,104);
+    shell.fillStyle(0x704037).fillTriangle(-98,-28,0,-82,98,-28);
+    shell.lineStyle(5,0xd19a67).strokeTriangle(-98,-28,0,-82,98,-28);
+    shell.fillStyle(0x9a6548).fillRect(-80,-22,160,82);
+    shell.lineStyle(3,0x4b302b).strokeRect(-80,-22,160,82);
+    c.add(shell);
+    for(let ix=-4;ix<=4;ix++) c.add(this.add.image(ix*16,-18,"house-sprites",48+Math.abs(ix%3)).setScale(1.05));
+    const doorRotation=doorAngle-90;
+    const doorFrame=this.add.rectangle(doorX,doorY,46,58,0x2b182f).setAngle(doorRotation).setStrokeStyle(4,0xc896ff).setDepth(y+70);
+    const portal=this.add.rectangle(doorX,doorY,31,45,0x8129c7,.88).setAngle(doorRotation).setStrokeStyle(2,accent).setDepth(y+71);
+    this.tweens.add({targets:portal,alpha:.42,scaleX:.78,duration:640,yoyo:true,repeat:-1});
+    const dx=doorX-x,dy=doorY-y,length=Math.hypot(dx,dy),ux=dx/length,uy=dy/length;
+    const signX=doorX-ux*47,signY=doorY-uy*47;
+    this.add.rectangle(signX,signY,150,44,0x2a201c,.98).setStrokeStyle(3,0xf4d69a).setDepth(y+72);
+    this.add.text(signX,signY-8,title.toUpperCase(),this.textStyle(13,"#fff4cc")).setOrigin(.5).setDepth(y+73);
+    this.add.text(signX,signY+9,worldName,this.textStyle(10,destination.accent,"#111b19")).setOrigin(.5).setDepth(y+73);
+  }
+
+  private createPlayer(x:number,y:number){
+    this.player=this.physics.add.sprite(x,y,"sandip",0).setOrigin(.5,.82).setDepth(1000);
+    this.player.setAlpha(1).setCollideWorldBounds(true).setBodySize(16,11).setOffset(8,34);
+    this.physics.add.collider(this.player,this.collisionLayer!);
+    this.cameras.main.startFollow(this.player,true,.14,.14);
+    // Integer zoom preserves crisp pixels while keeping at least one pentagon vertex
+    // visible from the central spawn on a typical desktop viewport.
+    this.cameras.main.setZoom(this.scale.width < 760 ? 1 : 2);
+    this.nightOverlay=this.add.rectangle(0,0,this.map!.widthInPixels,this.map!.heightInPixels,0x10295c,0).setOrigin(0).setDepth(40).setBlendMode(Phaser.BlendModes.MULTIPLY);
+  }
+
+  private move(x:number,y:number){ this.player.setVelocity(x,y); this.facing=this.directionFor(x,y); this.player.anims.play(`walk-${this.facing}`,true); }
+  private stop(){ this.player.setVelocity(0,0).anims.stop(); this.player.setFrame(directions.indexOf(this.facing)*7); }
+  private directionFor(x:number,y:number):Direction{
+    const angle=(Math.atan2(y,x)*180/Math.PI+360)%360;
+    if(angle<22.5||angle>=337.5)return "east"; if(angle<67.5)return "southeast"; if(angle<112.5)return "south"; if(angle<157.5)return "southwest";
+    if(angle<202.5)return "west"; if(angle<247.5)return "northwest"; if(angle<292.5)return "north"; return "northeast";
+  }
+
+  private handlePointer(pointer:Phaser.Input.Pointer){
+    if(this.transitioning)return; const world=pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2;
+    if(this.nearby&&Phaser.Math.Distance.Between(world.x,world.y,this.nearby.x,this.nearby.y)<64){this.activate(this.nearby);return;}
+    const target=this.worldToTile(world.x,world.y); this.path=this.findPath(this.worldToTile(this.player.x,this.player.y),target); gameEvents.emit("path-result",{found:this.path.length>0,target});
+  }
+  private worldToTile(x:number,y:number):Point{return{x:Math.floor(x/TILE),y:Math.floor(y/TILE)};}
+  private walkable(x:number,y:number){return y>=0&&y<this.blocked.length&&x>=0&&x<this.blocked[0].length&&!this.blocked[y][x];}
+  private findPath(start:Point,goal:Point):Point[]{
+    if(!this.walkable(goal.x,goal.y))return[]; const key=(p:Point)=>`${p.x},${p.y}`,open:Point[]=[start],came=new Map<string,Point>(),cost=new Map<string,number>([[key(start),0]]);
+    const steps=[[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1]];
+    while(open.length){open.sort((a,b)=>cost.get(key(a))!+Math.hypot(goal.x-a.x,goal.y-a.y)-cost.get(key(b))!-Math.hypot(goal.x-b.x,goal.y-b.y));const current=open.shift()!;
+      if(current.x===goal.x&&current.y===goal.y){const path:Point[]=[];let cursor=current;while(key(cursor)!==key(start)){path.unshift(cursor);cursor=came.get(key(cursor))!;}return path;}
+      for(const [dx,dy] of steps){const next={x:current.x+dx,y:current.y+dy};if(!this.walkable(next.x,next.y))continue;if(dx&&dy&&(!this.walkable(current.x+dx,current.y)||!this.walkable(current.x,current.y+dy)))continue;
+        const nextCost=cost.get(key(current))!+(dx&&dy?Math.SQRT2:1);if(!cost.has(key(next))||nextCost<cost.get(key(next))!){cost.set(key(next),nextCost);came.set(key(next),current);open.push(next);}}
+    }return[];
+  }
+
+  private updateInteraction(){let next:Interaction|null=null,min=54;for(const item of this.interactions){const distance=Phaser.Math.Distance.Between(this.player.x,this.player.y,item.x,item.y);if(distance<min){min=distance;next=item;}}if(JSON.stringify(next)!==JSON.stringify(this.nearby)){this.nearby=next;gameEvents.emit("proximity",{interaction:next});}}
+  private activate(item:Interaction){this.travelTo(item.destination);}
+  private travelTo(destination:DestinationId){
+    if(this.transitioning)return;this.transitioning=true;this.path=[];this.stop();
+    const portal=this.interactions.find((item)=>item.destination===destination);
+    if(portal){const angle=Phaser.Math.Angle.Between(32*TILE+8,24*TILE+8,portal.x,portal.y);this.player.setPosition(portal.x-Math.cos(angle)*34,portal.y-Math.sin(angle)*34);this.facing=this.directionFor(Math.cos(angle),Math.sin(angle));this.stop();}
+    gameEvents.emit("portal-state",{active:true,destination});
+    const open=()=>gameEvents.emit("open-content",{destination});const done=()=>{this.transitioning=false;gameEvents.emit("portal-state",{active:false,destination});};
+    if(this.reducedEffects){this.cameras.main.fadeOut(90,55,16,86,(_c:Phaser.Cameras.Scene2D.Camera,p:number)=>{if(p===1){open();this.cameras.main.fadeIn(100,116,48,180);done();}});return;}
+    const veil=this.add.rectangle(0,0,this.scale.width,this.scale.height,0x52108a,.12).setOrigin(0).setScrollFactor(0).setDepth(2000),pixels:Phaser.GameObjects.Rectangle[]=[];
+    for(let i=0;i<72;i++)pixels.push(this.add.rectangle(Phaser.Math.Between(0,this.scale.width),Phaser.Math.Between(0,this.scale.height),Phaser.Math.Between(4,14),Phaser.Math.Between(10,42),i%2?0xb05cff:0x5720a6,.22).setScrollFactor(0).setDepth(2001));
+    this.tweens.add({targets:[...pixels,veil],alpha:1,duration:560});
+    window.setTimeout(()=>{open();this.cameras.main.fadeIn(420,116,48,180);done();},1180);
+  }
+
+  private returnToCenter(){this.path=[];this.player.setPosition(32*TILE+8,24*TILE+8);this.facing="south";this.stop();gameEvents.emit("location-changed",{location:"village"});}
+
+  private findMarkedTile(layerName:string){const layer=this.map!.getLayer(layerName);if(!layer)return null;for(let y=0;y<layer.data.length;y++)for(let x=0;x<layer.data[y].length;x++)if(layer.data[y][x].index!==-1)return{x,y};return null;}
+  private property(object:Phaser.Types.Tilemaps.TiledObject,name:string){return object.properties?.find((item:{name:string;value:unknown})=>item.name===name)?.value;}
+  private applyTheme(theme:ThemeMode,amount:number){if(!this.nightOverlay)return;const alpha=theme === "day" ? 0 : theme === "night" ? .32 : .32 * amount;this.tweens.add({targets:this.nightOverlay,alpha,duration:this.reducedEffects?80:700});}
+  private textStyle(size:number,color="#fff",backgroundColor?:string):Phaser.Types.GameObjects.Text.TextStyle{return{fontFamily:"Pixelify Sans, monospace",fontSize:`${size}px`,fontStyle:"bold",color,backgroundColor,padding:backgroundColor?{x:5,y:3}:undefined,resolution:2,stroke:"#160f16",strokeThickness:size>=12?2:1};}
 }

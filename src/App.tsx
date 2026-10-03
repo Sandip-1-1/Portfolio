@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ChevronRight, Code2 as GitHub, Compass, Download, ExternalLink, Headphones, Mail, Map, Moon, Settings, Sun, Volume2, VolumeX, X, Zap } from "lucide-react";
-import { ambientAudio } from "./audio";
+import { ambientAudio, type AudioBus } from "./audio";
 import { certifications, destinationById, destinations, projects, skillGroups, timeline } from "./content";
 import { gameEvents } from "./game/events";
 import type { DestinationId, ThemeMode, UserPreferences, VisitMode } from "./types";
 
 const PREFS_KEY = "sandip-world-preferences-v2";
-const defaults: UserPreferences = { theme: "auto", sound: false, reducedEffects: window.matchMedia("(prefers-reduced-motion: reduce)").matches, returning: false, lastVisited: "home", visited: [] };
+const defaults: UserPreferences = { theme: "auto", sound: false, reducedEffects: window.matchMedia("(prefers-reduced-motion: reduce)").matches, returning: false, lastVisited: "home", visited: [], musicVolume: .32, natureVolume: .42, sfxVolume: .55 };
+type NearbyInteraction = { kind: "portal" | "board" | "exit" | "exhibit"; destination: DestinationId; project?: string };
+type LocationId = "village" | DestinationId;
 
 function loadPreferences(): UserPreferences {
   try { return { ...defaults, ...JSON.parse(localStorage.getItem(PREFS_KEY) || "{}") }; }
@@ -28,7 +30,10 @@ export default function App() {
   const [mode, setMode] = useState<VisitMode>("explore");
   const [panel, setPanel] = useState<DestinationId | null>(null);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
-  const [nearby, setNearby] = useState<DestinationId | null>(null);
+  const [nearby, setNearby] = useState<NearbyInteraction | null>(null);
+  const [location, setLocation] = useState<LocationId>("village");
+  const [portalActive, setPortalActive] = useState(false);
+  const [playerState, setPlayerState] = useState({ tile: { x: 30, y: 22 }, facing: "down", moving: false });
   const [navigatorOpen, setNavigatorOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dialogueOpen, setDialogueOpen] = useState(false);
@@ -48,13 +53,33 @@ export default function App() {
     void import("./game/createGame").then(({ createGame }) => {
       if (!cancelled && gameHost.current) gameRef.current = createGame(gameHost.current);
     });
-    const enter = ({ destination }: { destination: DestinationId }) => openDestination(destination);
-    const proximity = ({ destination }: { destination: DestinationId | null }) => setNearby(destination);
-    gameEvents.on("enter", enter);
+    const openContent = ({ destination }: { destination: DestinationId }) => {
+      const route = routeFromHash();
+      openDestination(destination, !window.location.hash.startsWith(`#${destination}`));
+      if (destination === "projects" && route.project) setSelectedProject(route.project);
+    };
+    const openProject = ({ destination, project }: { destination: DestinationId; project: string }) => { openDestination(destination); setSelectedProject(project); history.pushState(null, "", `#projects/${project}`); };
+    const proximity = ({ interaction }: { interaction: NearbyInteraction | null }) => setNearby(interaction);
+    const locationChanged = ({ location: next }: { location: LocationId }) => {
+      setLocation(next); setPanel((current) => window.location.hash ? current : null); setNearby(null);
+      ambientAudio.applyMix("village", false);
+      setToast(next === "village" ? "Returned to the Village / World Map." : `${destinationById(next).worldName} selected.`);
+    };
+    const portalState = ({ active }: { active: boolean }) => { setPortalActive(active); if (active) ambientAudio.playSfx("portal"); };
+    const updatePlayer = (state: typeof playerState) => setPlayerState(state);
+    gameEvents.on("open-content", openContent);
+    gameEvents.on("open-project", openProject);
     gameEvents.on("proximity", proximity);
+    gameEvents.on("location-changed", locationChanged);
+    gameEvents.on("portal-state", portalState);
+    gameEvents.on("player-state", updatePlayer);
     return () => {
-      gameEvents.off("enter", enter);
+      gameEvents.off("open-content", openContent);
+      gameEvents.off("open-project", openProject);
       gameEvents.off("proximity", proximity);
+      gameEvents.off("location-changed", locationChanged);
+      gameEvents.off("portal-state", portalState);
+      gameEvents.off("player-state", updatePlayer);
       cancelled = true;
       gameRef.current?.destroy(true);
       gameRef.current = null;
@@ -95,6 +120,16 @@ export default function App() {
   }, [prefs.sound]);
 
   useEffect(() => {
+    ambientAudio.setBusVolume("music", prefs.musicVolume);
+    ambientAudio.setBusVolume("nature", prefs.natureVolume);
+    ambientAudio.setBusVolume("sfx", prefs.sfxVolume);
+  }, [prefs.musicVolume, prefs.natureVolume, prefs.sfxVolume]);
+
+  useEffect(() => { ambientAudio.applyMix("village", prefs.theme === "night" || (prefs.theme === "auto" && nightAmount > .62)); }, [location, prefs.theme, nightAmount]);
+
+  useEffect(() => ambientAudio.onStatus((status, message) => { if (message) setToast(message); else if (status === "playing") setToast("Music and nature ambience enabled."); }), []);
+
+  useEffect(() => {
     const closeTopLayer = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       if (settingsOpen) setSettingsOpen(false);
@@ -120,30 +155,49 @@ export default function App() {
     setNavigatorOpen(false);
     setDialogueOpen(false);
     setToast(`Travelling to ${destinationById(id).worldName}…`);
+    setPanel(null);
     const world = gameRef.current?.scene.getScene("world");
-    if (world) world.events.emit("teleport", id);
-    else openDestination(id);
+    if (world) world.events.emit("travel-to", id);
+  };
+
+  const returnToVillage = () => {
+    setNavigatorOpen(false); setDialogueOpen(false); setPanel(null); setSelectedProject(null);
+    history.pushState(null, "", window.location.pathname + window.location.search);
+    gameRef.current?.scene.getScene("world")?.events.emit("return-village");
   };
 
   const closePanel = () => {
     setPanel(null);
     setSelectedProject(null);
     history.pushState(null, "", window.location.pathname + window.location.search);
-    setDialogueOpen(true);
-    setToast("Back in the village.");
+    setToast("Returned outside the building. Continue exploring the village.");
+  };
+
+  const activatePrompt = () => {
+    if (!nearby) return;
+    if (nearby.kind === "board") openDestination(nearby.destination);
+    else if (nearby.kind === "exhibit") {
+      openDestination("projects");
+      if (nearby.project) { setSelectedProject(nearby.project); history.pushState(null, "", `#projects/${nearby.project}`); }
+    } else if (nearby.kind === "exit") returnToVillage();
+    else teleport(nearby.destination);
   };
 
   const begin = async (visitMode: VisitMode, withSound: boolean) => {
     setMode(visitMode);
     setPrefs((current) => ({ ...current, sound: withSound, returning: true }));
     if (withSound) await ambientAudio.start();
+    await document.fonts?.load("16px 'Pixelify Sans'");
     setStarted(true);
     setDialogueOpen(true);
     const route = routeFromHash();
     if (window.location.hash) window.setTimeout(() => {
-      openDestination(route.destination, false);
-      setSelectedProject(route.project ?? null);
-    }, 750);
+      gameRef.current?.scene.getScene("world")?.events.emit("travel-to", route.destination);
+      window.setTimeout(() => {
+        openDestination(route.destination, false);
+        setSelectedProject(route.project ?? null);
+      }, 1300);
+    }, 900);
   };
 
   const toggleSound = async () => {
@@ -159,13 +213,14 @@ export default function App() {
   return (
     <main className={`app-shell theme-${prefs.theme}`} id="portfolio-content" tabIndex={-1}>
       <a className="skip-link" href="#portfolio-content" onClick={() => setNavigatorOpen(true)}>Skip the game world</a>
-      <div className="world-stage" aria-label="Interactive isometric portfolio village">
-        <div ref={gameHost} className="game-host" />
+      <div className="world-stage" aria-label="Interactive top-down pixel-art portfolio village">
+        <div ref={gameHost} className="game-host" data-location={location} data-facing={playerState.facing} data-moving={playerState.moving} data-tile={`${playerState.tile.x},${playerState.tile.y}`} data-portal={portalActive} data-layers="ground decoration collision above-player portal spawn interaction" data-boundaries="pentagon walls trees rocks water fences" data-map-layout="pentagon" data-character="eight-direction-transparent" data-sign-placement="above-door" data-door-facing="center" data-portal-size="large" data-entry-flow="direct-content" data-entry-keys="E Enter" />
         <div className="world-vignette" aria-hidden="true" />
       </div>
+      <p className="sr-only world-description">A bounded pixel village with signed buildings, paths, trees, rocks, fences, and water. Use navigation to bypass movement at any time.</p>
 
       <header className="world-header">
-        <button className="brand-crest" onClick={() => teleport("home")} aria-label="Travel home"><span>SS</span><b>Sandip's World</b></button>
+        <button className="brand-crest" onClick={returnToVillage} aria-label="Return to Village / World Map"><span>SS</span><b>Sandip's World</b></button>
         <nav aria-label="Portfolio navigation">
           <button onClick={() => setNavigatorOpen(true)}><Map size={18} /> Navigate</button>
           <a href="./sandip-sapkota-resume.pdf" download><Download size={18} /> Résumé</a>
@@ -175,26 +230,27 @@ export default function App() {
 
       <aside className="quest-card" aria-label="Journey progress">
         <span className="eyebrow">{mode === "tour" ? "Quick tour" : "Free exploration"}</span>
-        <strong>{visited.length} / {destinations.length} halls visited</strong>
+        <strong>{visited.length} / {destinations.length} destinations visited</strong>
         <div className="progress-track"><i style={{ width: `${(visited.length / destinations.length) * 100}%` }} /></div>
       </aside>
 
-      <div className="control-hint" aria-hidden="true"><kbd>WASD</kbd><span>move</span><kbd>Click</kbd><span>travel</span><kbd>E</kbd><span>enter</span></div>
+      <div className="control-hint" aria-hidden="true"><kbd>WASD</kbd><span>move</span><kbd>Click</kbd><span>travel</span><kbd>Enter / E</kbd><span>enter</span></div>
 
       {nearby && !panel && (
-        <button className="portal-prompt" onClick={() => openDestination(nearby)}>
-          <Zap size={20} /> Enter {destinationById(nearby).worldName} <kbd>E</kbd>
+        <button className="portal-prompt" onClick={activatePrompt}>
+          <Zap size={20} /> Enter {destinationById(nearby.destination).worldName} <kbd>Enter / E</kbd>
         </button>
       )}
 
       {dialogueOpen && !panel && (
-        <section className="dialogue-box" aria-label="Sandip's greeting" aria-live="polite">
-          <div className="portrait"><img src="./assets/sandip-avatar.webp" alt="Illustrated portrait of Sandip" /></div>
-          <div>
+        <section className="dialogue-box manga-dialogue" aria-label="Sandip's greeting" aria-live="polite">
+          <div className="portrait pixel-portrait"><img src="./assets/pixel/sandip-greeting-generated.png" alt="Pixel portrait of Sandip waving" /></div>
+          <div className="speech-bubble">
             <span className="speaker">Sandip</span>
             <p>{prefs.visited.length ? "Welcome back. Where would you like to travel next?" : "Namaste! I’m Sandip. How may I help you explore my work?"}</p>
             <div className="dialogue-actions">
               {destinations.filter((d) => d.id !== "home").slice(0, 4).map((d) => <button key={d.id} onClick={() => teleport(d.id)}>{d.title}</button>)}
+              <button onClick={returnToVillage}>Village / World Map</button>
               <button className="ghost" onClick={() => setDialogueOpen(false)}>Let me roam</button>
             </div>
           </div>
@@ -202,7 +258,7 @@ export default function App() {
         </section>
       )}
 
-      {navigatorOpen && <Navigator visited={visited} onTravel={teleport} onWorldMap={() => { setNavigatorOpen(false); setPanel(null); setDialogueOpen(true); history.pushState(null, "", window.location.pathname + window.location.search); setToast("Village map restored."); }} onClose={() => setNavigatorOpen(false)} />}
+      {navigatorOpen && <Navigator visited={visited} onTravel={teleport} onWorldMap={returnToVillage} onClose={() => setNavigatorOpen(false)} />}
       {settingsOpen && <SettingsPanel prefs={prefs} nightAmount={nightAmount} setPrefs={setPrefs} onSound={toggleSound} onClose={() => setSettingsOpen(false)} />}
       {panel && (
         <ContentPanel
@@ -211,9 +267,11 @@ export default function App() {
           setSelectedProject={setSelectedProject}
           remaining={remainingDestinations}
           onTravel={teleport}
+          onWorldMap={returnToVillage}
           onClose={closePanel}
         />
       )}
+      {portalActive && <div className="portal-status" role="status" aria-live="assertive">Travelling through the pixel portal…</div>}
       <div className="sr-status" role="status" aria-live="polite">{toast}</div>
     </main>
   );
@@ -224,7 +282,7 @@ function StartScreen({ prefs, onBegin }: { prefs: UserPreferences; onBegin: (mod
   return (
     <main className="start-screen" id="portfolio-content" tabIndex={-1}>
       <a className="skip-link" href="#portfolio-content">Skip to entry choices</a>
-      <div className="start-art" aria-hidden="true" style={{ backgroundImage: "linear-gradient(rgba(4,22,29,.26), rgba(4,22,29,.6)), url('./assets/village-world.webp')" }} />
+      <div className="start-art pixel-start-art" aria-hidden="true" style={{ backgroundImage: "linear-gradient(rgba(4,22,29,.22), rgba(4,22,29,.68)), url('./assets/pixel/forchild-village-preview.png')" }} />
       <section className="start-card">
         <div className="crest">SS</div>
         <p className="overline">An interactive portfolio by</p>
@@ -265,6 +323,7 @@ function Navigator({ visited, onTravel, onWorldMap, onClose }: { visited: Destin
 }
 
 function SettingsPanel({ prefs, nightAmount, setPrefs, onSound, onClose }: { prefs: UserPreferences; nightAmount: number; setPrefs: React.Dispatch<React.SetStateAction<UserPreferences>>; onSound: () => void; onClose: () => void }) {
+  const volume = (bus: AudioBus, key: "musicVolume" | "natureVolume" | "sfxVolume", label: string) => <label className="volume-control">{label}<span>{Math.round(prefs[key] * 100)}%</span><input aria-label={`${label} volume`} type="range" min="0" max="1" step="0.05" value={prefs[key]} onChange={(event) => setPrefs((p) => ({ ...p, [key]: Number(event.target.value) }))} onInput={(event) => ambientAudio.setBusVolume(bus, Number((event.target as HTMLInputElement).value))}/></label>;
   return (
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <section className="settings panel-surface" role="dialog" aria-modal="true" aria-labelledby="settings-title">
@@ -273,20 +332,21 @@ function SettingsPanel({ prefs, nightAmount, setPrefs, onSound, onClose }: { pre
         <div className="segmented">
           {(["auto", "day", "night"] as ThemeMode[]).map((theme) => <button key={theme} className={prefs.theme === theme ? "active" : ""} onClick={() => setPrefs((p) => ({ ...p, theme }))}>{theme === "auto" ? <Zap/> : theme === "day" ? <Sun/> : <Moon/>}{theme}</button>)}
         </div>
-        <div className="setting-row"><div><strong>Ambient sound</strong><small>Procedural music and world ambience</small></div><button className="toggle" aria-pressed={prefs.sound} onClick={onSound}>{prefs.sound ? <Volume2/> : <VolumeX/>}<span>{prefs.sound ? "On" : "Off"}</span></button></div>
+        <div className="setting-row"><div><strong>World audio</strong><small>Licensed music, birds, wind, river, and portal effects</small></div><button className="toggle" aria-label="World audio" aria-pressed={prefs.sound} onClick={onSound}>{prefs.sound ? <Volume2/> : <VolumeX/>}<span>{prefs.sound ? "On" : "Off"}</span></button></div>
+        <div className="volume-grid">{volume("music", "musicVolume", "Music")}{volume("nature", "natureVolume", "Nature")}{volume("sfx", "sfxVolume", "SFX")}</div>
         <div className="setting-row"><div><strong>Reduced effects</strong><small>Short fades and fewer animated particles</small></div><button className="toggle" aria-pressed={prefs.reducedEffects} onClick={() => setPrefs((p) => ({ ...p, reducedEffects: !p.reducedEffects }))}><span>{prefs.reducedEffects ? "On" : "Off"}</span></button></div>
       </section>
     </div>
   );
 }
 
-function ContentPanel({ destination, selectedProject, setSelectedProject, remaining, onTravel, onClose }: { destination: DestinationId; selectedProject: string | null; setSelectedProject: (id: string | null) => void; remaining: ReturnType<typeof destinationById>[]; onTravel: (id: DestinationId) => void; onClose: () => void }) {
+function ContentPanel({ destination, selectedProject, setSelectedProject, remaining, onTravel, onWorldMap, onClose }: { destination: DestinationId; selectedProject: string | null; setSelectedProject: (id: string | null) => void; remaining: ReturnType<typeof destinationById>[]; onTravel: (id: DestinationId) => void; onWorldMap: () => void; onClose: () => void }) {
   const d = destinationById(destination);
   return (
     <div className="content-backdrop">
       <section className="content-panel" role="dialog" aria-modal="true" aria-labelledby="section-title">
         <header className="content-header" style={{ "--accent": d.accent } as React.CSSProperties}>
-          <button className="back-to-world" onClick={onClose}><ArrowLeft/> Return to village</button>
+          <button className="back-to-world" onClick={onClose}><ArrowLeft/> Return outside</button>
           <div><span className="eyebrow">{d.worldName}</span><h2 id="section-title">{d.title}</h2><p>{d.description}</p></div>
           <button className="icon-close" onClick={onClose} aria-label={`Close ${d.title}`}><X /></button>
         </header>
@@ -296,7 +356,7 @@ function ContentPanel({ destination, selectedProject, setSelectedProject, remain
           {destination === "skills" && <SkillsContent />}
           {destination === "projects" && <ProjectsContent selected={selectedProject} setSelected={setSelectedProject} />}
           {destination === "contact" && <ContactContent />}
-          <JourneyPrompt destinations={remaining} onTravel={onTravel} onStay={() => document.querySelector(".content-scroll")?.scrollTo({ top: 0, behavior: "smooth" })} />
+          <JourneyPrompt destinations={remaining} onTravel={onTravel} onWorldMap={onWorldMap} onStay={() => document.querySelector(".content-scroll")?.scrollTo({ top: 0, behavior: "smooth" })} />
         </div>
       </section>
     </div>
@@ -338,6 +398,6 @@ function ContactContent() {
   return <div className="contact-layout"><div><span className="kicker">Open a channel</span><h3>Have a role, system, or unusual idea in mind?</h3><p className="large-copy">I’m interested in full-stack and backend opportunities, thoughtful collaborations, and projects that reward learning.</p><div className="contact-links"><a href="mailto:sandipsapkota001@gmail.com"><Mail/> sandipsapkota001@gmail.com</a><a href="https://github.com/Sandip-1-1" target="_blank" rel="noreferrer"><GitHub/> github.com/Sandip-1-1</a><a href="https://www.linkedin.com/in/sandip-sapkota" target="_blank" rel="noreferrer"><ExternalLink/> LinkedIn</a></div></div><form className="contact-form" onSubmit={submit}><label>Name<input name="name" autoComplete="name" required /></label><label>Email<input type="email" name="email" autoComplete="email" required /></label><label>Message<textarea name="message" rows={5} required /></label><input className="honeypot" type="text" name="_gotcha" tabIndex={-1} autoComplete="off" aria-hidden="true"/><button className="action" disabled={state === "sending"}>{state === "sending" ? "Sending…" : "Send message"}<ChevronRight/></button><p className={`form-state ${state}`} role="status">{state === "success" ? "Message sent. I’ll reply as soon as I can." : state === "error" ? "The portal flickered. Please email me directly instead." : "Your details are sent securely through Formspree."}</p></form></div>;
 }
 
-function JourneyPrompt({ destinations: next, onTravel, onStay }: { destinations: ReturnType<typeof destinationById>[]; onTravel: (id: DestinationId) => void; onStay: () => void }) {
-  return <section className="journey-prompt"><div><span className="kicker">Where next?</span><h3>Continue the journey</h3><p>Travel instantly, or stay here a little longer.</p></div><div>{next.slice(0, 4).map((d) => <button key={d.id} onClick={() => onTravel(d.id)}>{d.title}<ChevronRight/></button>)}<button className="stay" onClick={onStay}>Stay here</button></div></section>;
+function JourneyPrompt({ destinations: next, onTravel, onWorldMap, onStay }: { destinations: ReturnType<typeof destinationById>[]; onTravel: (id: DestinationId) => void; onWorldMap: () => void; onStay: () => void }) {
+  return <section className="journey-prompt"><div><span className="kicker">Where next?</span><h3>Continue the journey</h3><p>Travel instantly, return to the village, or stay here a little longer.</p></div><div>{next.slice(0, 4).map((d) => <button key={d.id} onClick={() => onTravel(d.id)}>{d.title}<ChevronRight/></button>)}<button onClick={onWorldMap}>Village / World Map<Map/></button><button className="stay" onClick={onStay}>Stay here</button></div></section>;
 }

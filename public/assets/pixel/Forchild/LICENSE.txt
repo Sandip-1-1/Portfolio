@@ -1,0 +1,7 @@
+Basic Village Tileset by Forchild
+Source: https://forchild.itch.io/village-tileset
+License: Creative Commons Zero v1.0 Universal (CC0 1.0)
+License text: https://creativecommons.org/publicdomain/zero/1.0/legalcode
+
+The creator page states that the pack is CC0, may be used and modified in
+commercial or non-commercial projects, and contains no generative AI content.
