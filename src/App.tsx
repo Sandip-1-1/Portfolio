@@ -7,7 +7,7 @@ import type { DestinationId, ThemeMode, UserPreferences, VisitMode } from "./typ
 
 const PREFS_KEY = "sandip-world-preferences-v2";
 const defaults: UserPreferences = { theme: "auto", sound: false, reducedEffects: window.matchMedia("(prefers-reduced-motion: reduce)").matches, returning: false, lastVisited: "home", visited: [], musicVolume: .32, natureVolume: .42, sfxVolume: .55 };
-type NearbyInteraction = { kind: "portal" | "board" | "exit" | "exhibit"; destination: DestinationId; project?: string };
+type NearbyInteraction = { kind: "portal" | "board" | "exit" | "exhibit"; destination: DestinationId; project?: string } | { kind: "rest" };
 type LocationId = "village" | DestinationId;
 
 function loadPreferences(): UserPreferences {
@@ -67,6 +67,7 @@ export default function App() {
       setToast(next === "village" ? "Returned to the Village / World Map." : `${destinationById(next).worldName} selected.`);
     };
     const portalState = ({ active }: { active: boolean }) => { setPortalActive(active); if (active) ambientAudio.playSfx("portal"); };
+    const restState = ({ active }: { active: boolean }) => setToast(active ? "Taking a quiet break at the central table. Move to stand up." : "Ready to continue exploring.");
     const updatePlayer = (state: typeof playerState) => setPlayerState(state);
     const updateViewport = (state: typeof viewportState) => setViewportState(state);
     gameEvents.on("open-content", openContent);
@@ -74,6 +75,7 @@ export default function App() {
     gameEvents.on("proximity", proximity);
     gameEvents.on("location-changed", locationChanged);
     gameEvents.on("portal-state", portalState);
+    gameEvents.on("rest-state", restState);
     gameEvents.on("player-state", updatePlayer);
     gameEvents.on("viewport-state", updateViewport);
     return () => {
@@ -82,6 +84,7 @@ export default function App() {
       gameEvents.off("proximity", proximity);
       gameEvents.off("location-changed", locationChanged);
       gameEvents.off("portal-state", portalState);
+      gameEvents.off("rest-state", restState);
       gameEvents.off("player-state", updatePlayer);
       gameEvents.off("viewport-state", updateViewport);
       cancelled = true;
@@ -179,7 +182,8 @@ export default function App() {
 
   const activatePrompt = () => {
     if (!nearby) return;
-    if (nearby.kind === "board") openDestination(nearby.destination);
+    if (nearby.kind === "rest") gameRef.current?.scene.getScene("world")?.events.emit("activate-nearby");
+    else if (nearby.kind === "board") openDestination(nearby.destination);
     else if (nearby.kind === "exhibit") {
       openDestination("projects");
       if (nearby.project) { setSelectedProject(nearby.project); history.pushState(null, "", `#projects/${nearby.project}`); }
@@ -242,7 +246,7 @@ export default function App() {
 
       {nearby && !panel && (
         <button className="portal-prompt" onClick={activatePrompt}>
-          <Zap size={20} /> Enter {destinationById(nearby.destination).worldName} <kbd>Enter / E</kbd>
+          <Zap size={20} /> {nearby.kind === "rest" ? "Sit and relax" : `Enter ${destinationById(nearby.destination).worldName}`} <kbd>Enter / E</kbd>
         </button>
       )}
 

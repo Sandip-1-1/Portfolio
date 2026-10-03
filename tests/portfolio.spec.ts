@@ -41,7 +41,7 @@ test("builds a real bounded tile world and changes directional animation", async
   await expect.poll(() => host.getAttribute("data-tile")).not.toBe(initialTile);
   await page.keyboard.up("ArrowRight");
   await expect(host).toHaveAttribute("data-moving", "false");
-  await expect(host).toHaveAttribute("data-facing", "east");
+  await expect(host).toHaveAttribute("data-facing", "south");
   expect(await host.getAttribute("data-tile")).not.toBe(initialTile);
 });
 
@@ -71,6 +71,7 @@ test("supports normalized diagonal movement and diagonal animation", async ({ pa
   await page.keyboard.up("ArrowUp");
   await page.keyboard.up("ArrowRight");
   await expect(host).toHaveAttribute("data-moving", "false");
+  await expect(host).toHaveAttribute("data-facing", "south");
 });
 
 test("click movement uses the collision-aware path system", async ({ page }) => {
@@ -80,7 +81,7 @@ test("click movement uses the collision-aware path system", async ({ page }) => 
   const canvas = page.locator("canvas");
   const box = await canvas.boundingBox();
   if (!box) throw new Error("Canvas has no bounds");
-  await page.mouse.click(box.x + box.width * .67, box.y + box.height * .56);
+  await page.mouse.click(box.x + box.width * .57, box.y + box.height * .5);
   await expect.poll(() => host.getAttribute("data-tile"), { timeout: 5000 }).not.toBe(initialTile);
 });
 

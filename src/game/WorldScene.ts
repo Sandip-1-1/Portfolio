@@ -6,7 +6,7 @@ import { gameEvents } from "./events";
 const TILE = 16;
 type Direction = "south" | "southwest" | "west" | "northwest" | "north" | "northeast" | "east" | "southeast";
 type Point = { x: number; y: number };
-type Interaction = { kind: "portal"; destination: DestinationId; x: number; y: number };
+type Interaction = { kind: "portal"; destination: DestinationId; x: number; y: number } | { kind: "rest"; x: number; y: number };
 const directions: Direction[] = ["south", "southwest", "west", "northwest", "north", "northeast", "east", "southeast"];
 
 export class WorldScene extends Phaser.Scene {
@@ -22,6 +22,8 @@ export class WorldScene extends Phaser.Scene {
   private facing: Direction = "south";
   private transitioning = false;
   private reducedEffects = false;
+  private resting = false;
+  private portalEffects: Phaser.GameObjects.GameObject[] = [];
   private nightOverlay?: Phaser.GameObjects.Rectangle;
   private readonly handleResize = (gameSize: Phaser.Structs.Size) => this.resizeCamera(gameSize.width, gameSize.height);
 
@@ -51,6 +53,7 @@ export class WorldScene extends Phaser.Scene {
     this.events.on("set-theme", (theme: ThemeMode, amount: number) => this.applyTheme(theme, amount));
     this.events.on("travel-to", (destination: DestinationId) => this.travelTo(destination));
     this.events.on("return-village", () => this.returnToCenter());
+    this.events.on("activate-nearby", () => { if(this.nearby)this.activate(this.nearby); });
     this.events.on("reduced-effects", (value: boolean) => { this.reducedEffects = value; });
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize));
@@ -61,6 +64,7 @@ export class WorldScene extends Phaser.Scene {
     let dx = Number(this.cursors.right.isDown || this.keys.D.isDown) - Number(this.cursors.left.isDown || this.keys.A.isDown);
     let dy = Number(this.cursors.down.isDown || this.keys.S.isDown) - Number(this.cursors.up.isDown || this.keys.W.isDown);
     if (dx || dy) {
+      if (this.resting) { this.resting=false; gameEvents.emit("rest-state",{active:false}); }
       this.path = [];
       const length = Math.hypot(dx, dy); dx /= length; dy /= length;
       this.move(dx * 96, dy * 96);
@@ -111,51 +115,58 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private buildVillageObjects() {
-    const wall = this.add.graphics().setDepth(15);
-    const points = [[32,3],[59,18],[50,44],[14,44],[5,18]].map(([x,y]) => new Phaser.Math.Vector2(x*TILE+8,y*TILE+8));
-    wall.lineStyle(16,0x2a1c21,1).strokePoints(points,true);
-    wall.lineStyle(10,0x8c6a50,1).strokePoints(points,true);
-    wall.lineStyle(3,0xd8b77a,1).strokePoints(points,true);
+    this.add.circle(32*TILE+8,24*TILE+8,118,0xffdc83,.035).setDepth(-7).setBlendMode(Phaser.BlendModes.ADD);
     this.addScenery();
     this.add.text(32*TILE+8,24*TILE-30,"CENTRAL WAYPOINT",this.textStyle(11,"#fff1b8","#17231fee")).setOrigin(.5).setDepth(900);
     const objects = this.map!.getObjectLayer("buildings")?.objects ?? [];
     objects.forEach((object) => {
       const destination = this.property(object,"destination") as DestinationId;
       const title = String(this.property(object,"title"));
-      const worldName = String(this.property(object,"worldName"));
       const doorX = Number(this.property(object,"doorX"));
       const doorY = Number(this.property(object,"doorY"));
       const doorAngle = Number(this.property(object,"doorAngle"));
-      this.renderBuilding(object.x!,object.y!,destination,title,worldName,doorX,doorY,doorAngle);
+      this.renderBuilding(object.x!,object.y!,destination,title,doorX,doorY,doorAngle);
       this.interactions.push({ kind:"portal", destination, x:doorX, y:doorY });
     });
   }
 
-  private renderBuilding(x:number,y:number,id:DestinationId,title:string,worldName:string,doorX:number,doorY:number,doorAngle:number) {
+  private renderBuilding(x:number,y:number,id:DestinationId,title:string,doorX:number,doorY:number,doorAngle:number) {
     const destination = destinations.find((item)=>item.id===id)!;
     const accent = Phaser.Display.Color.HexStringToColor(destination.accent).color;
     const doorRotation=doorAngle-90;
-    this.add.image(x,y,`building-${id}`).setAngle(doorRotation).setDepth(y+45);
+    const awayX=(x-32*TILE-8)/TILE,awayY=(y-24*TILE-8)/TILE,awayLength=Math.hypot(awayX,awayY)||1;
+    this.add.image(x+(awayX/awayLength)*6,y+(awayY/awayLength)*6,`building-${id}`).setAngle(doorRotation).setTint(0x14202a).setAlpha(.4).setDepth(y+43);
+    this.add.image(x,y,`building-${id}`).setAngle(doorRotation).setTint(0xfff1c7).setDepth(y+45);
     const portal=this.add.ellipse(doorX,doorY,32,18,0x8129c7,.76).setAngle(doorRotation).setStrokeStyle(3,accent).setDepth(y+71);
     this.tweens.add({targets:portal,alpha:.36,scaleX:.78,scaleY:.72,duration:700,yoyo:true,repeat:-1,ease:"Sine.easeInOut"});
     const dx=doorX-x,dy=doorY-y,length=Math.hypot(dx,dy),ux=dx/length,uy=dy/length;
-    const signX=doorX-ux*27,signY=doorY-uy*27;
-    this.add.rectangle(signX,signY,82,25,0x241b19,.96).setStrokeStyle(2,0xf4d69a).setDepth(y+72);
-    this.add.text(signX,signY-3,title.toUpperCase(),this.textStyle(10,"#fff4cc")).setOrigin(.5).setDepth(y+73);
-    this.add.text(signX,signY+7,worldName.replace(/Arrival |Skills |Project |Contact |About /,""),this.textStyle(7,destination.accent)).setOrigin(.5).setDepth(y+73);
+    const signX=doorX-ux*10,signY=doorY-uy*10;
+    this.add.rectangle(signX,signY,50,15,0x241b19,.92).setStrokeStyle(1,0xf4d69a).setDepth(y+72);
+    this.add.text(signX,signY,title.toUpperCase(),this.textStyle(7,"#fff4cc")).setOrigin(.5).setDepth(y+73);
   }
 
   private addScenery() {
-    const trees = [
-      {x:24,y:13,frame:0},{x:40,y:13,frame:2},{x:51,y:27,frame:1},
-      {x:43,y:39,frame:0},{x:21,y:39,frame:2},{x:13,y:27,frame:1},
-    ];
-    trees.forEach(({x,y,frame}) => {
-      const image = this.add.image(x*TILE+8,y*TILE+8,"tree-sprites",frame).setOrigin(.5,.82).setDepth(y*TILE+36);
+    const trees=this.map!.getObjectLayer("scenery")?.objects??[];
+    trees.forEach((tree) => {
+      const frame=Number(this.property(tree,"frame")??0),x=tree.x!,y=tree.y!;
+      const image = this.add.image(x,y,"tree-sprites",frame).setOrigin(.5,.82).setDepth(y+36);
       image.setData("scenery",true);
     });
-    [[27,20],[37,20],[39,30],[25,30],[31,17],[33,31]].forEach(([x,y],index)=>this.add.image(x*TILE+8,y*TILE+8,"outdoor-sprites",index%2===0?0:1).setDepth(-8));
-    [[27,25],[37,25]].forEach(([x,y])=>this.add.image(x*TILE+8,y*TILE+8,"furniture-sprites",69).setScale(1.25).setDepth(y*TILE+8));
+    this.addBorderForest();
+    [[28,27],[37,22]].forEach(([x,y])=>this.add.image(x*TILE+8,y*TILE+8,"furniture-sprites",69).setScale(1.25).setDepth(y*TILE+8));
+    this.add.image(36*TILE+8,27*TILE+8,"furniture-sprites",69).setScale(1.65).setDepth(27*TILE+12);
+    this.interactions.push({kind:"rest",x:35*TILE+8,y:27*TILE+8});
+  }
+
+  private addBorderForest(){
+    const vertices=[{x:32,y:3},{x:53,y:17},{x:45,y:42},{x:19,y:42},{x:11,y:17}],buildings=[{x:32,y:6},{x:50,y:18},{x:43,y:39},{x:21,y:39},{x:14,y:18}];
+    let count=0;
+    for(let i=0;i<vertices.length;i++){
+      const a=vertices[i],b=vertices[(i+1)%vertices.length],steps=Math.ceil(Math.hypot(b.x-a.x,b.y-a.y));
+      for(let s=0;s<=steps;s+=2){const x=Math.round(a.x+(b.x-a.x)*s/steps),y=Math.round(a.y+(b.y-a.y)*s/steps);if(buildings.some((p)=>Math.hypot(p.x-x,p.y-y)<4.4))continue;
+        this.add.image(x*TILE+8,y*TILE+8,"tree-sprites",count++%3).setOrigin(.5,.82).setDepth(y*TILE+45);
+      }
+    }
   }
 
   private createPlayer(x:number,y:number){
@@ -170,7 +181,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private move(x:number,y:number){ this.player.setVelocity(x,y); this.facing=this.directionFor(x,y); this.player.anims.play(`walk-${this.facing}`,true); }
-  private stop(){ this.player.setVelocity(0,0).anims.stop(); this.player.setFrame(directions.indexOf(this.facing)*9); }
+  private stop(faceVisitor=true){ this.player.setVelocity(0,0).anims.stop(); if(faceVisitor)this.facing="south"; this.player.setFrame(directions.indexOf(this.facing)*9); }
 
   private resizeCamera(width:number,height:number){
     const zoom = width >= 1500 && height >= 900 ? 2 : 1;
@@ -201,21 +212,23 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private updateInteraction(){let next:Interaction|null=null,min=54;for(const item of this.interactions){const distance=Phaser.Math.Distance.Between(this.player.x,this.player.y,item.x,item.y);if(distance<min){min=distance;next=item;}}if(JSON.stringify(next)!==JSON.stringify(this.nearby)){this.nearby=next;gameEvents.emit("proximity",{interaction:next});}}
-  private activate(item:Interaction){this.travelTo(item.destination);}
+  private activate(item:Interaction){if(item.kind==="rest"){this.path=[];this.resting=true;this.player.setPosition(item.x,item.y+5);this.stop();gameEvents.emit("rest-state",{active:true});return;}this.travelTo(item.destination);}
   private travelTo(destination:DestinationId){
-    if(this.transitioning)return;this.transitioning=true;this.path=[];this.stop();
-    const portal=this.interactions.find((item)=>item.destination===destination);
-    if(portal){const angle=Phaser.Math.Angle.Between(32*TILE+8,24*TILE+8,portal.x,portal.y);this.player.setPosition(portal.x-Math.cos(angle)*34,portal.y-Math.sin(angle)*34);this.facing=this.directionFor(Math.cos(angle),Math.sin(angle));this.stop();}
+    if(this.transitioning)return;this.clearPortalEffects();this.transitioning=true;this.path=[];this.stop();
+    const portal=this.interactions.find((item):item is Extract<Interaction,{kind:"portal"}>=>item.kind==="portal"&&item.destination===destination);
+    if(portal){const angle=Phaser.Math.Angle.Between(32*TILE+8,24*TILE+8,portal.x,portal.y);this.player.setPosition(portal.x-Math.cos(angle)*34,portal.y-Math.sin(angle)*34);this.facing=this.directionFor(Math.cos(angle),Math.sin(angle));this.stop(false);}
     gameEvents.emit("portal-state",{active:true,destination});
-    const open=()=>gameEvents.emit("open-content",{destination});const done=()=>{this.transitioning=false;gameEvents.emit("portal-state",{active:false,destination});};
+    const open=()=>gameEvents.emit("open-content",{destination});const done=()=>{this.clearPortalEffects();this.transitioning=false;gameEvents.emit("portal-state",{active:false,destination});};
     if(this.reducedEffects){this.cameras.main.fadeOut(90,55,16,86,(_c:Phaser.Cameras.Scene2D.Camera,p:number)=>{if(p===1){open();this.cameras.main.fadeIn(100,116,48,180);done();}});return;}
     const veil=this.add.rectangle(0,0,this.scale.width,this.scale.height,0x52108a,.12).setOrigin(0).setScrollFactor(0).setDepth(2000),pixels:Phaser.GameObjects.Rectangle[]=[];
     for(let i=0;i<72;i++)pixels.push(this.add.rectangle(Phaser.Math.Between(0,this.scale.width),Phaser.Math.Between(0,this.scale.height),Phaser.Math.Between(4,14),Phaser.Math.Between(10,42),i%2?0xb05cff:0x5720a6,.22).setScrollFactor(0).setDepth(2001));
+    this.portalEffects=[veil,...pixels];
     this.tweens.add({targets:[...pixels,veil],alpha:1,duration:560});
     window.setTimeout(()=>{open();this.cameras.main.fadeIn(420,116,48,180);done();},1180);
   }
 
-  private returnToCenter(){this.path=[];this.player.setPosition(32*TILE+8,24*TILE+8);this.facing="south";this.stop();gameEvents.emit("location-changed",{location:"village"});}
+  private clearPortalEffects(){this.portalEffects.forEach((item)=>item.destroy());this.portalEffects=[];}
+  private returnToCenter(){this.clearPortalEffects();this.transitioning=false;this.path=[];this.resting=false;this.player.setPosition(32*TILE+8,24*TILE+8);this.facing="south";this.stop();gameEvents.emit("portal-state",{active:false});gameEvents.emit("rest-state",{active:false});gameEvents.emit("location-changed",{location:"village"});}
 
   private findMarkedTile(layerName:string){const layer=this.map!.getLayer(layerName);if(!layer)return null;for(let y=0;y<layer.data.length;y++)for(let x=0;x<layer.data[y].length;x++)if(layer.data[y][x].index!==-1)return{x,y};return null;}
   private property(object:Phaser.Types.Tilemaps.TiledObject,name:string){return object.properties?.find((item:{name:string;value:unknown})=>item.name===name)?.value;}
