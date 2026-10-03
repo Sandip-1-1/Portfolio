@@ -48,7 +48,7 @@ const doorFor = (building) => {
   const dx = 32 - building.x, dy = 24 - building.y;
   const length = Math.hypot(dx, dy);
   const ux = dx / length, uy = dy / length;
-  return { x: Math.round(building.x + ux * 4.25), y: Math.round(building.y + uy * 4.25), ux, uy, angle: Math.atan2(dy, dx) * 180 / Math.PI };
+  return { x: Math.round(building.x + ux * 3.6), y: Math.round(building.y + uy * 3.6), ux, uy, angle: Math.atan2(dy, dx) * 180 / Math.PI };
 };
 const line = (x0,y0,x1,y1,value,width=2) => { const steps=Math.max(Math.abs(x1-x0),Math.abs(y1-y0)); for(let s=0;s<=steps;s++){ const x=Math.round(x0+(x1-x0)*s/steps),y=Math.round(y0+(y1-y0)*s/steps); for(let oy=-width;oy<=width;oy++)for(let ox=-width;ox<=width;ox++)if(Math.abs(ox)+Math.abs(oy)<=width+1)at(decoration,W,x+ox,y+oy,value); } };
 // The plain soil tile keeps the pentagonal route network calm and legible; sparse
@@ -65,6 +65,12 @@ for(const b of buildings){
   }
   at(portal,W,door.x,door.y,gids.outdoor+1); at(interaction,W,door.x,door.y,gids.outdoor+1);
 }
+// Sparse scenery keeps the centre readable while making the pentagon feel lived in.
+// Trees use circular collision footprints; benches block a single tile.
+for(const [x,y] of [[24,13],[40,13],[51,27],[43,39],[21,39],[13,27]]){
+  for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++)if(Math.abs(ox)+Math.abs(oy)<=1)at(collision,W,x+ox,y+oy,gids.outdoor);
+}
+for(const [x,y] of [[27,25],[37,25]])at(collision,W,x,y,gids.outdoor);
 at(spawn,W,32,24,gids.outdoor);
 const outdoorObjects = buildings.map((b,i)=>{const door=doorFor(b);return { id:i+1, name:b.destination, type:"building", x:b.x*TILE+8, y:b.y*TILE+8, width:0, height:0, rotation:b.rotation, point:true, properties:[{name:"destination",type:"string",value:b.destination},{name:"title",type:"string",value:b.title},{name:"worldName",type:"string",value:b.worldName},{name:"doorX",type:"float",value:door.x*TILE+8},{name:"doorY",type:"float",value:door.y*TILE+8},{name:"doorAngle",type:"float",value:door.angle}] }});
 const villageLayers=[layer(1,"ground",W,H,ground),layer(2,"decoration",W,H,decoration),layer(3,"collision",W,H,collision,false),layer(4,"above-player",W,H,above),layer(5,"portal",W,H,portal),layer(6,"spawn",W,H,spawn,false),layer(7,"interaction",W,H,interaction,false),{id:8,name:"buildings",type:"objectgroup",opacity:1,visible:true,x:0,y:0,objects:outdoorObjects}];

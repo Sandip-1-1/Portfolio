@@ -13,17 +13,21 @@ provenance.
   `Outdoor_tileset.png`, `House_tileset.png`, `Trees_and_bushes.png`, and
   `Furniture.png`. See `public/assets/pixel/Forchild/LICENSE.txt`.
 - **16x16 base sprites** — Unnamed. CC0 1.0. Original creator page:
-  <https://opengameart.org/content/16x16-base-sprites>. `base_male.png` was
-  used as the starting reference for `sandip-portrait.png`. See
+  <https://opengameart.org/content/16x16-base-sprites>. The earlier reference
+  files are retained under `docs/archive-assets/` but are no longer shipped or
+  used by the website. See
   `public/assets/pixel/BASE-SPRITE-LICENSE.txt`.
 - **Sandip eight-direction character sheet** — original project artwork drawn
   for this portfolio from Sandip's approved avatar reference. It contains
-  separate idle/walk frames for all eight directions and does not reuse a paid
-  or AI-generated character asset.
-- **Sandip greeting portrait** — generated specifically for this portfolio with
-  OpenAI image generation from Sandip's approved avatar description, then
-  trimmed and optimized as a transparent PNG. It is used only beside the
-  opening speech bubble; the playable sprite remains hand-authored project art.
+  separate idle frames and eight-frame walks for all eight directions and does
+  not reuse a paid or AI-generated character asset.
+- **Five village building facades** — original project assets generated with
+  OpenAI image generation from a project-specific Nepal-inspired pixel-art
+  brief, then individually cropped, heavily downsampled, palette-reduced, and
+  nearest-neighbor scaled for a consistent game-pixel grid. They contain no
+  third-party game artwork. The high-resolution working source is retained in
+  `docs/original-village-buildings-source.png` and is excluded from the static
+  build.
 - Walking poses follow general animation principles from Sandro Maglione's
   freely accessible [Pixel art Character Animations guide](https://www.sandromaglione.com/articles/pixel-art-character-animations-guide): opposing arm/leg poses, contact frames, and a one-pixel body bounce. No guide artwork is redistributed.
 

@@ -23,6 +23,7 @@ export class WorldScene extends Phaser.Scene {
   private transitioning = false;
   private reducedEffects = false;
   private nightOverlay?: Phaser.GameObjects.Rectangle;
+  private readonly handleResize = (gameSize: Phaser.Structs.Size) => this.resizeCamera(gameSize.width, gameSize.height);
 
   constructor() { super("world"); }
 
@@ -32,9 +33,12 @@ export class WorldScene extends Phaser.Scene {
     this.load.image("house-tiles", `${root}/Forchild/BasicVillageTileset/House_tileset.png`);
     this.load.image("furniture-tiles", `${root}/Forchild/BasicVillageTileset/Furniture.png`);
     this.load.image("trees-tiles", `${root}/Forchild/BasicVillageTileset/Trees_and_bushes.png`);
+    this.load.spritesheet("tree-sprites", `${root}/Forchild/BasicVillageTileset/Trees_and_bushes.png`, { frameWidth: 48, frameHeight: 48 });
     this.load.spritesheet("house-sprites", `${root}/Forchild/BasicVillageTileset/House_tileset.png`, { frameWidth: 16, frameHeight: 16 });
     this.load.spritesheet("furniture-sprites", `${root}/Forchild/BasicVillageTileset/Furniture.png`, { frameWidth: 16, frameHeight: 16 });
-    this.load.spritesheet("sandip", `${root}/sandip-eight-direction.png`, { frameWidth: 32, frameHeight: 48 });
+    this.load.spritesheet("outdoor-sprites", `${root}/Forchild/BasicVillageTileset/Outdoor_tileset.png`, { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet("sandip", `${root}/sandip-eight-direction.png`, { frameWidth: 24, frameHeight: 32 });
+    for (const destination of destinations) this.load.image(`building-${destination.id}`, `${root}/building-${destination.id}.png`);
     this.load.tilemapTiledJSON("map-village", `${root}/maps/village.tmj`);
   }
 
@@ -48,6 +52,8 @@ export class WorldScene extends Phaser.Scene {
     this.events.on("travel-to", (destination: DestinationId) => this.travelTo(destination));
     this.events.on("return-village", () => this.returnToCenter());
     this.events.on("reduced-effects", (value: boolean) => { this.reducedEffects = value; });
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize));
   }
 
   update() {
@@ -70,9 +76,9 @@ export class WorldScene extends Phaser.Scene {
 
   private createAnimations() {
     directions.forEach((direction, row) => {
-      if (!this.anims.exists(`walk-${direction}`)) this.anims.create({ key: `walk-${direction}`, frames: this.anims.generateFrameNumbers("sandip", { start: row * 7 + 1, end: row * 7 + 6 }), frameRate: 9, repeat: -1 });
+      if (!this.anims.exists(`walk-${direction}`)) this.anims.create({ key: `walk-${direction}`, frames: this.anims.generateFrameNumbers("sandip", { start: row * 9 + 1, end: row * 9 + 8 }), frameRate: 11, repeat: -1 });
     });
-    if (!this.anims.exists("wave-south")) this.anims.create({ key: "wave-south", frames: this.anims.generateFrameNumbers("sandip", { start: 56, end: 59 }), frameRate: 6, repeat: 1 });
+    if (!this.anims.exists("wave-south")) this.anims.create({ key: "wave-south", frames: this.anims.generateFrameNumbers("sandip", { start: 72, end: 77 }), frameRate: 8, repeat: 1 });
   }
 
   private buildVillage() {
@@ -110,6 +116,7 @@ export class WorldScene extends Phaser.Scene {
     wall.lineStyle(16,0x2a1c21,1).strokePoints(points,true);
     wall.lineStyle(10,0x8c6a50,1).strokePoints(points,true);
     wall.lineStyle(3,0xd8b77a,1).strokePoints(points,true);
+    this.addScenery();
     this.add.text(32*TILE+8,24*TILE-30,"CENTRAL WAYPOINT",this.textStyle(11,"#fff1b8","#17231fee")).setOrigin(.5).setDepth(900);
     const objects = this.map!.getObjectLayer("buildings")?.objects ?? [];
     objects.forEach((object) => {
@@ -119,47 +126,57 @@ export class WorldScene extends Phaser.Scene {
       const doorX = Number(this.property(object,"doorX"));
       const doorY = Number(this.property(object,"doorY"));
       const doorAngle = Number(this.property(object,"doorAngle"));
-      this.renderBuilding(object.x!,object.y!,object.rotation ?? 0,destination,title,worldName,doorX,doorY,doorAngle);
+      this.renderBuilding(object.x!,object.y!,destination,title,worldName,doorX,doorY,doorAngle);
       this.interactions.push({ kind:"portal", destination, x:doorX, y:doorY });
     });
   }
 
-  private renderBuilding(x:number,y:number,rotation:number,id:DestinationId,title:string,worldName:string,doorX:number,doorY:number,doorAngle:number) {
+  private renderBuilding(x:number,y:number,id:DestinationId,title:string,worldName:string,doorX:number,doorY:number,doorAngle:number) {
     const destination = destinations.find((item)=>item.id===id)!;
     const accent = Phaser.Display.Color.HexStringToColor(destination.accent).color;
-    const c = this.add.container(x,y).setAngle(rotation).setDepth(y+45);
-    const shell = this.add.graphics();
-    shell.fillStyle(0x2a1d20).fillRect(-88,-34,176,104);
-    shell.fillStyle(0x704037).fillTriangle(-98,-28,0,-82,98,-28);
-    shell.lineStyle(5,0xd19a67).strokeTriangle(-98,-28,0,-82,98,-28);
-    shell.fillStyle(0x9a6548).fillRect(-80,-22,160,82);
-    shell.lineStyle(3,0x4b302b).strokeRect(-80,-22,160,82);
-    c.add(shell);
-    for(let ix=-4;ix<=4;ix++) c.add(this.add.image(ix*16,-18,"house-sprites",48+Math.abs(ix%3)).setScale(1.05));
     const doorRotation=doorAngle-90;
-    const doorFrame=this.add.rectangle(doorX,doorY,46,58,0x2b182f).setAngle(doorRotation).setStrokeStyle(4,0xc896ff).setDepth(y+70);
-    const portal=this.add.rectangle(doorX,doorY,31,45,0x8129c7,.88).setAngle(doorRotation).setStrokeStyle(2,accent).setDepth(y+71);
-    this.tweens.add({targets:portal,alpha:.42,scaleX:.78,duration:640,yoyo:true,repeat:-1});
+    this.add.image(x,y,`building-${id}`).setAngle(doorRotation).setDepth(y+45);
+    const portal=this.add.ellipse(doorX,doorY,32,18,0x8129c7,.76).setAngle(doorRotation).setStrokeStyle(3,accent).setDepth(y+71);
+    this.tweens.add({targets:portal,alpha:.36,scaleX:.78,scaleY:.72,duration:700,yoyo:true,repeat:-1,ease:"Sine.easeInOut"});
     const dx=doorX-x,dy=doorY-y,length=Math.hypot(dx,dy),ux=dx/length,uy=dy/length;
-    const signX=doorX-ux*47,signY=doorY-uy*47;
-    this.add.rectangle(signX,signY,150,44,0x2a201c,.98).setStrokeStyle(3,0xf4d69a).setDepth(y+72);
-    this.add.text(signX,signY-8,title.toUpperCase(),this.textStyle(13,"#fff4cc")).setOrigin(.5).setDepth(y+73);
-    this.add.text(signX,signY+9,worldName,this.textStyle(10,destination.accent,"#111b19")).setOrigin(.5).setDepth(y+73);
+    const signX=doorX-ux*27,signY=doorY-uy*27;
+    this.add.rectangle(signX,signY,82,25,0x241b19,.96).setStrokeStyle(2,0xf4d69a).setDepth(y+72);
+    this.add.text(signX,signY-3,title.toUpperCase(),this.textStyle(10,"#fff4cc")).setOrigin(.5).setDepth(y+73);
+    this.add.text(signX,signY+7,worldName.replace(/Arrival |Skills |Project |Contact |About /,""),this.textStyle(7,destination.accent)).setOrigin(.5).setDepth(y+73);
+  }
+
+  private addScenery() {
+    const trees = [
+      {x:24,y:13,frame:0},{x:40,y:13,frame:2},{x:51,y:27,frame:1},
+      {x:43,y:39,frame:0},{x:21,y:39,frame:2},{x:13,y:27,frame:1},
+    ];
+    trees.forEach(({x,y,frame}) => {
+      const image = this.add.image(x*TILE+8,y*TILE+8,"tree-sprites",frame).setOrigin(.5,.82).setDepth(y*TILE+36);
+      image.setData("scenery",true);
+    });
+    [[27,20],[37,20],[39,30],[25,30],[31,17],[33,31]].forEach(([x,y],index)=>this.add.image(x*TILE+8,y*TILE+8,"outdoor-sprites",index%2===0?0:1).setDepth(-8));
+    [[27,25],[37,25]].forEach(([x,y])=>this.add.image(x*TILE+8,y*TILE+8,"furniture-sprites",69).setScale(1.25).setDepth(y*TILE+8));
   }
 
   private createPlayer(x:number,y:number){
-    this.player=this.physics.add.sprite(x,y,"sandip",0).setOrigin(.5,.82).setDepth(1000);
-    this.player.setAlpha(1).setCollideWorldBounds(true).setBodySize(16,11).setOffset(8,34);
+    this.player=this.physics.add.sprite(x,y,"sandip",0).setOrigin(.5,.86).setDepth(1000);
+    this.player.setAlpha(1).setCollideWorldBounds(true).setBodySize(12,8).setOffset(6,23);
     this.physics.add.collider(this.player,this.collisionLayer!);
     this.cameras.main.startFollow(this.player,true,.14,.14);
     // Integer zoom preserves crisp pixels while keeping at least one pentagon vertex
     // visible from the central spawn on a typical desktop viewport.
-    this.cameras.main.setZoom(this.scale.width < 760 ? 1 : 2);
+    this.resizeCamera(this.scale.width,this.scale.height);
     this.nightOverlay=this.add.rectangle(0,0,this.map!.widthInPixels,this.map!.heightInPixels,0x10295c,0).setOrigin(0).setDepth(40).setBlendMode(Phaser.BlendModes.MULTIPLY);
   }
 
   private move(x:number,y:number){ this.player.setVelocity(x,y); this.facing=this.directionFor(x,y); this.player.anims.play(`walk-${this.facing}`,true); }
-  private stop(){ this.player.setVelocity(0,0).anims.stop(); this.player.setFrame(directions.indexOf(this.facing)*7); }
+  private stop(){ this.player.setVelocity(0,0).anims.stop(); this.player.setFrame(directions.indexOf(this.facing)*9); }
+
+  private resizeCamera(width:number,height:number){
+    const zoom = width >= 1500 && height >= 900 ? 2 : 1;
+    this.cameras.main.setZoom(zoom);
+    gameEvents.emit("viewport-state",{width,height,zoom});
+  }
   private directionFor(x:number,y:number):Direction{
     const angle=(Math.atan2(y,x)*180/Math.PI+360)%360;
     if(angle<22.5||angle>=337.5)return "east"; if(angle<67.5)return "southeast"; if(angle<112.5)return "south"; if(angle<157.5)return "southwest";

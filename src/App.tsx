@@ -34,6 +34,7 @@ export default function App() {
   const [location, setLocation] = useState<LocationId>("village");
   const [portalActive, setPortalActive] = useState(false);
   const [playerState, setPlayerState] = useState({ tile: { x: 30, y: 22 }, facing: "down", moving: false });
+  const [viewportState, setViewportState] = useState({ width: 0, height: 0, zoom: 1 });
   const [navigatorOpen, setNavigatorOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dialogueOpen, setDialogueOpen] = useState(false);
@@ -67,12 +68,14 @@ export default function App() {
     };
     const portalState = ({ active }: { active: boolean }) => { setPortalActive(active); if (active) ambientAudio.playSfx("portal"); };
     const updatePlayer = (state: typeof playerState) => setPlayerState(state);
+    const updateViewport = (state: typeof viewportState) => setViewportState(state);
     gameEvents.on("open-content", openContent);
     gameEvents.on("open-project", openProject);
     gameEvents.on("proximity", proximity);
     gameEvents.on("location-changed", locationChanged);
     gameEvents.on("portal-state", portalState);
     gameEvents.on("player-state", updatePlayer);
+    gameEvents.on("viewport-state", updateViewport);
     return () => {
       gameEvents.off("open-content", openContent);
       gameEvents.off("open-project", openProject);
@@ -80,6 +83,7 @@ export default function App() {
       gameEvents.off("location-changed", locationChanged);
       gameEvents.off("portal-state", portalState);
       gameEvents.off("player-state", updatePlayer);
+      gameEvents.off("viewport-state", updateViewport);
       cancelled = true;
       gameRef.current?.destroy(true);
       gameRef.current = null;
@@ -214,7 +218,7 @@ export default function App() {
     <main className={`app-shell theme-${prefs.theme}`} id="portfolio-content" tabIndex={-1}>
       <a className="skip-link" href="#portfolio-content" onClick={() => setNavigatorOpen(true)}>Skip the game world</a>
       <div className="world-stage" aria-label="Interactive top-down pixel-art portfolio village">
-        <div ref={gameHost} className="game-host" data-location={location} data-facing={playerState.facing} data-moving={playerState.moving} data-tile={`${playerState.tile.x},${playerState.tile.y}`} data-portal={portalActive} data-layers="ground decoration collision above-player portal spawn interaction" data-boundaries="pentagon walls trees rocks water fences" data-map-layout="pentagon" data-character="eight-direction-transparent" data-sign-placement="above-door" data-door-facing="center" data-portal-size="large" data-entry-flow="direct-content" data-entry-keys="E Enter" />
+        <div ref={gameHost} className="game-host" data-location={location} data-facing={playerState.facing} data-moving={playerState.moving} data-tile={`${playerState.tile.x},${playerState.tile.y}`} data-portal={portalActive} data-layers="ground decoration collision above-player portal spawn interaction" data-boundaries="pentagon walls trees rocks water fences" data-map-layout="pentagon" data-character="24x32-eight-direction-eight-frame-transparent" data-sign-placement="above-door" data-door-facing="center" data-portal-size="large" data-entry-flow="direct-content" data-entry-keys="E Enter" data-viewport={`${viewportState.width}x${viewportState.height}`} data-camera-zoom={viewportState.zoom} />
         <div className="world-vignette" aria-hidden="true" />
       </div>
       <p className="sr-only world-description">A bounded pixel village with signed buildings, paths, trees, rocks, fences, and water. Use navigation to bypass movement at any time.</p>
@@ -244,7 +248,6 @@ export default function App() {
 
       {dialogueOpen && !panel && (
         <section className="dialogue-box manga-dialogue" aria-label="Sandip's greeting" aria-live="polite">
-          <div className="portrait pixel-portrait"><img src="./assets/pixel/sandip-greeting-generated.png" alt="Pixel portrait of Sandip waving" /></div>
           <div className="speech-bubble">
             <span className="speaker">Sandip</span>
             <p>{prefs.visited.length ? "Welcome back. Where would you like to travel next?" : "Namaste! I’m Sandip. How may I help you explore my work?"}</p>
@@ -254,7 +257,7 @@ export default function App() {
               <button className="ghost" onClick={() => setDialogueOpen(false)}>Let me roam</button>
             </div>
           </div>
-          <button className="icon-close" onClick={() => setDialogueOpen(false)} aria-label="Close greeting"><X /></button>
+          <button className="icon-close dialogue-close" onClick={() => setDialogueOpen(false)} aria-label="Close greeting"><X /></button>
         </section>
       )}
 
