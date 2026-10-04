@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 // This is deliberately a deterministic pixel-art source build. The approved
@@ -6,6 +6,7 @@ import { resolve } from "node:path";
 // every live asset on an exact grid with real alpha and documented anchors.
 const OUT = resolve("/tmp/portfolio-approved-assets-svg");
 const PUBLIC = resolve("public/assets/pixel/approved");
+rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 mkdirSync(PUBLIC, { recursive: true });
 
@@ -106,42 +107,6 @@ function prop(i) {
 }
 save("island-decoration-tileset", 256, 64, Array.from({ length: 16 }, (_, i) => `<g transform="translate(${(i % 8) * 32} ${Math.floor(i / 8) * 32})">${prop(i)}</g>`).join(""));
 
-// The reference island is a source asset too: it gives the eventual Tiled map
-// a stable, testable five-route topology rather than relying on a screenshot.
-const MAP = 24;
-const center = { x: 12, y: 12 };
-const endpoints = [{ x: 12, y: 4 }, { x: 18, y: 8 }, { x: 17, y: 18 }, { x: 7, y: 18 }, { x: 6, y: 8 }];
-const islandInside = (x, y) => {
-  const dx = x - 11.5, dy = y - 11.5;
-  return Math.hypot(dx, dy) < 9.1 + Math.sin(dx * 1.7) * .55 + Math.cos(dy * 1.3) * .4;
-};
-const route = new Set();
-for (const end of endpoints) {
-  const steps = Math.max(Math.abs(end.x - center.x), Math.abs(end.y - center.y));
-  for (let i = 0; i <= steps; i++) {
-    const x = Math.round(center.x + (end.x - center.x) * i / steps), y = Math.round(center.y + (end.y - center.y) * i / steps);
-    route.add(`${x},${y}`);
-  }
-}
-const hasOutsideNeighbor = (x, y) => [[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy]) => !islandInside(x + dx, y + dy));
-function mapTile(x, y, collision = false) {
-  const inside = islandInside(x, y), edge = inside && hasOutsideNeighbor(x, y);
-  const px = x * 32, py = y * 32;
-  if (collision) return rect(px, py, 32, 32, !inside || edge ? "#b44747" : "#4fae6b");
-  if (!inside) return `<g transform="translate(${px} ${py})">${ocean(x + y * 3)}</g>`;
-  if (edge) return `<g transform="translate(${px} ${py})">${cliff(x + y)}</g>`;
-  if (route.has(`${x},${y}`)) return `<g transform="translate(${px} ${py})">${path(x + y)}</g>`;
-  return `<g transform="translate(${px} ${py})">${grass(x + y)}</g>`;
-}
-const islandBase = Array.from({ length: MAP * MAP }, (_, i) => mapTile(i % MAP, Math.floor(i / MAP))).join("");
-const islandProps = [
-  [10,10,1],[14,10,1],[9,15,7],[15,15,7],[8,9,8],[16,9,8],[12,12,2],
-].map(([x,y,i]) => `<g transform="translate(${x * 32} ${y * 32})">${prop(i)}</g>`).join("");
-save("closed-island-example", MAP * 32, MAP * 32, islandBase + islandProps);
-const collisionBase = Array.from({ length: MAP * MAP }, (_, i) => mapTile(i % MAP, Math.floor(i / MAP), true)).join("");
-const collisionLegend = rect(12, 12, 250, 54, "#172333", `opacity=".92"`) + rect(24, 28, 18, 18, "#4fae6b") + rect(52, 31, 130, 12, "#e8fbff") + rect(192, 28, 18, 18, "#b44747") + rect(220, 31, 30, 12, "#e8fbff");
-save("island-collision-preview", MAP * 32, MAP * 32, collisionBase + collisionLegend);
-
 const buildingSpec = [
   ["home", "south", "#9b4b45"], ["about", "southeast", "#7a5d9b"], ["skills", "southwest", "#4d7690"], ["projects", "northeast", "#a26b3f"], ["contact", "northwest", "#4d8b76"],
 ];
@@ -209,7 +174,7 @@ function tree(frame) {
 }
 save("island-tree-tileset", 192, 96, [0,1,2].map((f) => `<g transform="translate(${f * 64} 0)">${tree(f)}</g>`).join(""));
 
-const characterManifest = { manifest_version: "1.2", character: "sandip_developer", frame_width: 32, frame_height: 48, anchor: { x: 16, y: 46 }, directions: dirs, animations: { walk: { file: "character-walk-8dir.png", columns: 8, rows: 8, fps: 10, loop: true }, idle: { file: "character-idle-8dir.png", columns: 4, rows: 8, fps: 3, loop: true }, wave_south: { file: "character-wave-south.png", frames: 10, fps: 8, loop: false }, sit_down: { file: "character-sit-down-south.png", frames: 6, fps: 8, loop: false }, sit_loop: { file: "character-sit-loop-south.png", frames: 4, fps: 3, loop: true }, stand_up: { file: "character-stand-up-south.png", frames: 6, fps: 8, loop: false }, portal_react: { file: "character-portal-react.png", frames: 8, fps: 10, loop: false } } };
+const characterManifest = { manifest_version: "1.3", character: "sandip_developer", frame_width: 32, frame_height: 48, anchor: { x: 16, y: 46 }, directions: dirs, animations: { walk: { file: "character-walk-8dir.png", columns: 8, rows: 8, frames_per_direction: 8, fps: 10, loop: true }, idle: { file: "character-idle-8dir.png", columns: 4, rows: 8, frames_per_direction: 4, fps: 3, loop: true }, wave_south: { file: "character-wave-south.png", frames: 6, fps: 8, loop: false }, sit_down: { file: "character-sit-down-south.png", frames: 6, fps: 8, loop: false }, sit_loop: { file: "character-sit-loop-south.png", frames: 4, fps: 3, loop: true }, stand_up: { file: "character-stand-up-south.png", frames: 6, fps: 8, loop: false }, portal_react: { file: "character-portal-react.png", frames: 8, fps: 10, loop: false } } };
 const terrainManifest = {
   manifest_version: "2.2", tile_size: 32,
   tilesets: { terrain: "island-terrain-tileset.png", water_animation: "water-animation.png", foam_animation: "foam-animation.png", decorations: "island-decoration-tileset.png", trees: "island-tree-tileset.png" },

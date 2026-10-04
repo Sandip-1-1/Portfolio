@@ -35,7 +35,7 @@ export class WorldScene extends Phaser.Scene {
     this.load.image("house-tiles", `${root}/Forchild/BasicVillageTileset/House_tileset.png`);
     this.load.image("furniture-tiles", `${root}/Forchild/BasicVillageTileset/Furniture.png`);
     this.load.image("trees-tiles", `${root}/Forchild/BasicVillageTileset/Trees_and_bushes.png`);
-    this.load.spritesheet("tree-sprites", `${root}/Forchild/BasicVillageTileset/Trees_and_bushes.png`, { frameWidth: 48, frameHeight: 48 });
+    this.load.spritesheet("tree-sprites", `${root}/approved/island-tree-tileset.png`, { frameWidth: 64, frameHeight: 96 });
     this.load.spritesheet("house-sprites", `${root}/Forchild/BasicVillageTileset/House_tileset.png`, { frameWidth: 16, frameHeight: 16 });
     this.load.spritesheet("furniture-sprites", `${root}/Forchild/BasicVillageTileset/Furniture.png`, { frameWidth: 16, frameHeight: 16 });
     this.load.spritesheet("outdoor-sprites", `${root}/Forchild/BasicVillageTileset/Outdoor_tileset.png`, { frameWidth: 16, frameHeight: 16 });
@@ -89,7 +89,7 @@ export class WorldScene extends Phaser.Scene {
       if (!this.anims.exists(`walk-${direction}`)) this.anims.create({ key: `walk-${direction}`, frames: this.anims.generateFrameNumbers("sandip", { start: row * 8, end: row * 8 + 7 }), frameRate: 10, repeat: -1 });
       if (!this.anims.exists(`idle-${direction}`)) this.anims.create({ key: `idle-${direction}`, frames: this.anims.generateFrameNumbers("sandip-idle", { start: row * 4, end: row * 4 + 3 }), frameRate: 3, repeat: -1 });
     });
-    if (!this.anims.exists("wave-south")) this.anims.create({ key: "wave-south", frames: this.anims.generateFrameNumbers("sandip-wave", { start: 0, end: 9 }), frameRate: 8, repeat: 0 });
+    if (!this.anims.exists("wave-south")) this.anims.create({ key: "wave-south", frames: this.anims.generateFrameNumbers("sandip-wave", { start: 0, end: 5 }), frameRate: 8, repeat: 0 });
     if (!this.anims.exists("sit-south")) this.anims.create({ key: "sit-south", frames: this.anims.generateFrameNumbers("sandip-sit", { start: 0, end: 3 }), frameRate: 3, repeat: -1 });
   }
 
@@ -157,8 +157,8 @@ export class WorldScene extends Phaser.Scene {
   private addScenery() {
     const trees=this.map!.getObjectLayer("scenery")?.objects??[];
     trees.forEach((tree) => {
-      const frame=Number(this.property(tree,"frame")??0),x=tree.x!,y=tree.y!;
-      const image = this.add.image(x,y,"tree-sprites",frame).setOrigin(.5,.82).setDepth(y+36);
+      const frame=Number(this.property(tree,"frame")??0)%8,x=tree.x!,y=tree.y!;
+      const image = this.add.image(x,y,"tree-sprites",frame).setOrigin(.5,.9).setScale(.7).setDepth(y+36);
       image.setData("scenery",true);
     });
     this.addIslandDetails();

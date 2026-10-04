@@ -1,8 +1,7 @@
 # Approved pixel asset pack
 
-This directory describes the raw game assets prepared before the Phaser world is
-rewired. They are intentionally kept separate from the currently running
-prototype until the full pack has passed validation.
+This directory describes the current raw game assets consumed by the Phaser
+world. Legacy character v2 masters and placeholder island previews are excluded.
 
 ## Contents
 
@@ -17,8 +16,6 @@ prototype until the full pack has passed validation.
   shadows, collision masks, and interaction masks.
 - `sign-*.png` and `wayfinding-*.png`: five building plaques and five
   single-arrow route signs.
-- `closed-island-example.png` and `island-collision-preview.png`: a five-route
-  closed-island composition and its debug-only walkability proof.
 
 ## Guarantees
 
@@ -36,7 +33,7 @@ npm run assets:approved
 npm run assets:verify
 ```
 
-The source design board under `docs/approved-references/` is user-provided art
-direction. The `scripts/build-approved-assets.*` build turns the approved
-direction into raw runtime sheets and strips all board chrome from the shipped
-terrain atlas.
+The v3 character and environment masters under `docs/approved-references/` are
+original project artwork. The `scripts/build-approved-assets.*` build turns
+them into raw runtime sheets and strips transparent-gutter artifacts from the
+shipped atlases.

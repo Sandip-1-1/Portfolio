@@ -17,22 +17,23 @@ provenance.
   files are retained under `docs/archive-assets/` but are no longer shipped or
   used by the website. See
   `public/assets/pixel/BASE-SPRITE-LICENSE.txt`.
-- **Sandip eight-direction character sheet** — original project artwork drawn
-  for this portfolio from Sandip's approved avatar reference. It contains
-  separate idle frames and eight-frame walks for all eight directions and does
-  not reuse a paid or AI-generated character asset.
+- **Sandip v3 eight-direction character sheet** — original project artwork
+  generated with OpenAI image generation from Sandip's approved avatar, then
+  deterministically cropped, alpha-cleaned, nearest-neighbor normalized, and
+  validated as 32×48 frames. One palette-locked master supplies all directions
+  and actions; no third-party character asset is redistributed.
 - **Five village building facades** — original project assets generated with
   OpenAI image generation from a project-specific Nepal-inspired pixel-art
   brief, then individually cropped, heavily downsampled, palette-reduced, and
   nearest-neighbor scaled for a consistent game-pixel grid. They contain no
-  third-party game artwork. The high-resolution working source is retained in
-  `docs/original-village-buildings-source.png` and is excluded from the static
+  third-party game artwork. The working sources are retained under
+  `docs/approved-references/buildings-v2/` and are excluded from the static
   build.
 - Walking poses follow general animation principles from Sandro Maglione's
   freely accessible [Pixel art Character Animations guide](https://www.sandromaglione.com/articles/pixel-art-character-animations-guide): opposing arm/leg poses, contact frames, and a one-pixel body bounce. No guide artwork is redistributed.
 - **Approved pixel asset pack** — original project runtime sheets built from
-  Sandip's user-supplied approved design boards, original OpenAI-generated
-  character/building masters, and deterministic local source scripts. The
+  OpenAI-generated v3 character/environment masters, original building
+  masters, and deterministic local source scripts. The
   working references are retained under `docs/approved-references/`; only
   clean raw PNG sheets under `public/assets/pixel/approved/` are intended for
   runtime use. No Pinterest or paid-pack artwork is copied into this pack.
