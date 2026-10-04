@@ -26,10 +26,10 @@ test("builds a real bounded tile world and changes directional animation", async
   await enterWorld(page);
   const host = page.locator(".game-host");
   await expect(host).toHaveAttribute("data-layers", /ground.*collision.*above-player.*interaction/);
-  await expect(host).toHaveAttribute("data-boundaries", /pentagon.*walls.*water/);
+  await expect(host).toHaveAttribute("data-boundaries", /pentagon.*hidden-walls.*dense-forest.*water/);
   await expect(host).toHaveAttribute("data-map-layout", "pentagon");
-  await expect(host).toHaveAttribute("data-character", "24x32-eight-direction-eight-frame-transparent");
-  await expect(host).toHaveAttribute("data-sign-placement", "above-door");
+  await expect(host).toHaveAttribute("data-character", "24x32-eight-direction-eight-frame-seated-transparent");
+  await expect(host).toHaveAttribute("data-sign-placement", "rotated-above-building");
   await expect(host).toHaveAttribute("data-door-facing", "center");
   await expect(host).toHaveAttribute("data-portal-size", "large");
   await expect(host).toHaveAttribute("data-entry-flow", "direct-content");
@@ -50,10 +50,10 @@ test("game canvas and integer camera zoom respond to viewport changes", async ({
   await enterWorld(page);
   const host = page.locator(".game-host");
   await expect(host).toHaveAttribute("data-viewport", "1280x720");
-  await expect(host).toHaveAttribute("data-camera-zoom", "1");
+  await expect(host).toHaveAttribute("data-camera-zoom", "2");
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(host).toHaveAttribute("data-viewport", "390x844");
-  await expect(host).toHaveAttribute("data-camera-zoom", "1");
+  await expect(host).toHaveAttribute("data-camera-zoom", "2");
   const canvas = page.locator("canvas");
   await expect.poll(async () => Math.round((await canvas.boundingBox())?.width ?? 0)).toBe(390);
   await expect.poll(async () => Math.round((await canvas.boundingBox())?.height ?? 0)).toBe(844);

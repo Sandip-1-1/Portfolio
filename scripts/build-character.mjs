@@ -42,9 +42,23 @@ const frameGroup = (column, row, direction, phase, waving = false) => {
   return `${svg}</g>`;
 };
 
+const sittingFrame = (column) => {
+  const breathe = column % 4 === 2 ? 1 : 0;
+  let svg = `<g transform="translate(${column * FRAME_W},${9 * FRAME_H + breathe})">`;
+  svg += rect(6,4,12,4,"#171b24") + rect(5,7,14,5,"#171b24") + rect(7,10,10,6,"#e3a070");
+  svg += rect(8,11,2,2,"#f7eee5") + rect(14,11,2,2,"#f7eee5") + rect(9,14,6,1,"#5b342f");
+  svg += rect(10,15,4,2,"#27212a") + rect(11,17,2,1,"#171820");
+  svg += rect(5,18,14,7,"#33485d") + rect(7,19,4,6,"#526b82") + rect(12,19,4,6,"#a74e3a");
+  svg += rect(3,20,3,6,"#526b82") + rect(18,20,3,6,"#263b50");
+  svg += rect(6,25,6,4,"#78818b") + rect(12,25,6,4,"#68727d");
+  svg += rect(4,28,8,3,"#f4f2ed") + rect(12,28,8,3,"#fffdf7");
+  return `${svg}</g>`;
+};
+
 const frames = [];
 for (let row = 0; row < directions.length; row++) for (let column = 0; column < COLUMNS; column++) frames.push(frameGroup(column, row, directions[row], column));
 for (let column = 0; column < COLUMNS; column++) frames.push(frameGroup(column, 8, "south", column % 4, column < 6));
+for (let column = 0; column < COLUMNS; column++) frames.push(sittingFrame(column));
 
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${COLUMNS * FRAME_W}" height="${9 * FRAME_H}" viewBox="0 0 ${COLUMNS * FRAME_W} ${9 * FRAME_H}" shape-rendering="crispEdges">${frames.join("")}</svg>`;
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${COLUMNS * FRAME_W}" height="${10 * FRAME_H}" viewBox="0 0 ${COLUMNS * FRAME_W} ${10 * FRAME_H}" shape-rendering="crispEdges">${frames.join("")}</svg>`;
 writeFileSync("/tmp/sandip-eight-direction.svg", svg);
