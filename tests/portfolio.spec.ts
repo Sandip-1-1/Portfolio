@@ -26,7 +26,8 @@ test("builds a real bounded tile world and changes directional animation", async
   await enterWorld(page);
   const host = page.locator(".game-host");
   await expect(host).toHaveAttribute("data-layers", /ground.*collision.*above-player.*interaction/);
-  await expect(host).toHaveAttribute("data-boundaries", /pentagon.*hidden-walls.*dense-forest.*water/);
+  await expect(host).toHaveAttribute("data-boundaries", /pentagon.*hidden-walls.*cliff-island.*ocean/);
+  await expect(host).toHaveAttribute("data-wayfinding", "one-sign-per-path");
   await expect(host).toHaveAttribute("data-map-layout", "pentagon");
   await expect(host).toHaveAttribute("data-character", "24x32-eight-direction-eight-frame-seated-transparent");
   await expect(host).toHaveAttribute("data-sign-placement", "rotated-above-building");

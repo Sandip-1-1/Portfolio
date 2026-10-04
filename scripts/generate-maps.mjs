@@ -33,13 +33,23 @@ const inside = (x, y) => {
 };
 for (let y=0;y<H;y++) for (let x=0;x<W;x++) {
   const safe = inside(x+.5,y+.5);
-  at(ground,W,x,y,safe ? gids.outdoor : gids.outdoor+46);
+  const grassNoise=(x*17+y*31+x*y*3)%17;
+  const grassTile=grassNoise===0?gids.outdoor+2:grassNoise===1?gids.outdoor+12:grassNoise===2?gids.outdoor+14:grassNoise===3?gids.outdoor+24:gids.outdoor;
+  const waterNoise=(x*11+y*23+x*y)%17;
+  const waterTile=waterNoise===0?gids.outdoor+44:waterNoise===1?gids.outdoor+47:gids.outdoor+45;
+  at(ground,W,x,y,safe ? grassTile : waterTile);
   if (!safe) at(collision,W,x,y,gids.outdoor);
 }
 const edgePoints = [];
 for (let i=0;i<vertices.length;i++) {
   const a=vertices[i], b=vertices[(i+1)%vertices.length], steps=Math.max(Math.abs(b.x-a.x),Math.abs(b.y-a.y));
-  for(let s=0;s<=steps;s++){ const x=Math.round(a.x+(b.x-a.x)*s/steps), y=Math.round(a.y+(b.y-a.y)*s/steps); edgePoints.push([x,y]); at(collision,W,x,y,gids.outdoor); }
+  for(let s=0;s<=steps;s++){
+    const x=Math.round(a.x+(b.x-a.x)*s/steps), y=Math.round(a.y+(b.y-a.y)*s/steps);
+    const rx=x-center.x,ry=y-center.y,length=Math.hypot(rx,ry)||1;
+    edgePoints.push([x,y]); at(collision,W,x,y,gids.outdoor);
+    at(decoration,W,x,y,gids.outdoor+60+((x+y+i)%3));
+    at(decoration,W,Math.round(x-rx/length),Math.round(y-ry/length),gids.outdoor+72+((x*3+y+i)%3));
+  }
 }
 const buildings = [
   { destination:"home", title:"HOME", worldName:"Arrival Courtyard", x:32, y:6, rotation:0 },

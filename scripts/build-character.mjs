@@ -8,8 +8,14 @@ const rect = (x, y, w, h, fill) => `<rect x="${x}" y="${y}" width="${w}" height=
 const frameGroup = (column, row, direction, phase, waving = false) => {
   const side = direction.includes("west") ? -1 : direction.includes("east") ? 1 : 0;
   const back = direction === "north" || direction === "northwest" || direction === "northeast";
-  const stride = phase === 0 ? 0 : [0, 1, 1, 0, 0, -1, -1, 0][(phase - 1) % 8];
-  const bob = phase === 0 ? 0 : [0, 0, 1, 1, 0, 0, 1, 1][(phase - 1) % 8];
+  // Eight readable walk poses: contact, recoil, passing and high point on
+  // alternating feet. The stronger silhouette follows classic pixel-walk
+  // principles while keeping Sandip's own design and palette.
+  const gait = Math.max(0, phase - 1) % 8;
+  const stride = phase === 0 ? 0 : [-2,-1,0,1,2,1,0,-1][gait];
+  const bob = phase === 0 ? 0 : [0,1,1,0,0,1,1,0][gait];
+  const leftLift = phase === 0 ? 0 : [0,0,2,1,0,0,1,2][gait];
+  const rightLift = phase === 0 ? 0 : [0,0,1,2,0,0,2,1][gait];
   const faceShift = side;
   let svg = `<g transform="translate(${column * FRAME_W},${row * FRAME_H + bob})">`;
   if (back) {
@@ -28,17 +34,17 @@ const frameGroup = (column, row, direction, phase, waving = false) => {
   }
   svg += rect(6, 17, 12, 8, "#33485d") + rect(7, 18, 4, 7, "#526b82") + rect(16, 18, 2, 7, "#223346");
   svg += rect(11, 18, 5, 7, back ? "#2b3c4c" : "#a74e3a") + rect(12,18,1,7,"#e0b26d");
-  const leftArm = waving ? -1 : stride;
-  const rightArm = waving ? 0 : -stride;
-  svg += rect(4 + leftArm, waving ? 10 : 18, 3, waving ? 12 : 7, "#526b82");
-  svg += rect(18 + rightArm, 18, 3, 7, "#263b50");
+  const leftArm = waving ? -1 : Math.sign(stride) * Math.min(2,Math.abs(stride));
+  const rightArm = waving ? 0 : -Math.sign(stride) * Math.min(2,Math.abs(stride));
+  svg += rect(4 + leftArm, waving ? 10 : 18 + Math.max(0,-stride), 3, waving ? 12 : 7, "#526b82");
+  svg += rect(18 + rightArm, 18 + Math.max(0,stride), 3, 7, "#263b50");
   svg += rect(4 + leftArm, waving ? 8 : 24, 3, 2, "#d98e61") + rect(18 + rightArm, 24, 3, 2, "#d98e61");
   if (waving) svg += rect(4 + (phase % 2), 7, 3, 3, "#d98e61");
   const leftLeg = phase === 0 ? 0 : stride;
   const rightLeg = phase === 0 ? 0 : -stride;
-  svg += rect(7 + leftLeg, 25, 5, 5, "#78818b") + rect(13 + rightLeg, 25, 5, 5, "#68727d");
-  svg += rect(6 + leftLeg, 29, 6, 2, "#f4f2ed") + rect(13 + rightLeg, 29, 6, 2, "#fffdf7");
-  svg += rect(6 + leftLeg, 31, 6, 1, "#9da8ae") + rect(13 + rightLeg, 31, 6, 1, "#9da8ae");
+  svg += rect(7 + leftLeg, 25-leftLift, 5, 5, "#78818b") + rect(13 + rightLeg, 25-rightLift, 5, 5, "#68727d");
+  svg += rect(6 + leftLeg, 29-leftLift, 6, 2, "#f4f2ed") + rect(13 + rightLeg, 29-rightLift, 6, 2, "#fffdf7");
+  svg += rect(6 + leftLeg, 31-leftLift, 6, 1, "#9da8ae") + rect(13 + rightLeg, 31-rightLift, 6, 1, "#9da8ae");
   return `${svg}</g>`;
 };
 
