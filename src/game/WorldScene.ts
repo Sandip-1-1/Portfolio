@@ -39,9 +39,12 @@ export class WorldScene extends Phaser.Scene {
     this.load.spritesheet("house-sprites", `${root}/Forchild/BasicVillageTileset/House_tileset.png`, { frameWidth: 16, frameHeight: 16 });
     this.load.spritesheet("furniture-sprites", `${root}/Forchild/BasicVillageTileset/Furniture.png`, { frameWidth: 16, frameHeight: 16 });
     this.load.spritesheet("outdoor-sprites", `${root}/Forchild/BasicVillageTileset/Outdoor_tileset.png`, { frameWidth: 16, frameHeight: 16 });
-    this.load.spritesheet("sandip", `${root}/sandip-eight-direction.png`, { frameWidth: 24, frameHeight: 32 });
+    this.load.spritesheet("sandip", `${root}/approved/character-walk-8dir.png`, { frameWidth: 32, frameHeight: 48 });
+    this.load.spritesheet("sandip-idle", `${root}/approved/character-idle-8dir.png`, { frameWidth: 32, frameHeight: 48 });
+    this.load.spritesheet("sandip-wave", `${root}/approved/character-wave-south.png`, { frameWidth: 32, frameHeight: 48 });
+    this.load.spritesheet("sandip-sit", `${root}/approved/character-sit-loop-south.png`, { frameWidth: 32, frameHeight: 48 });
     this.load.image("wooden-table", `${root}/wooden-table.png`);
-    for (const destination of destinations) this.load.image(`building-${destination.id}`, `${root}/building-${destination.id}.png`);
+    for (const destination of destinations) this.load.image(`building-${destination.id}`, `${root}/approved/building-${destination.id}.png`);
     this.load.tilemapTiledJSON("map-village", `${root}/maps/village.tmj`);
   }
 
@@ -83,10 +86,11 @@ export class WorldScene extends Phaser.Scene {
 
   private createAnimations() {
     directions.forEach((direction, row) => {
-      if (!this.anims.exists(`walk-${direction}`)) this.anims.create({ key: `walk-${direction}`, frames: this.anims.generateFrameNumbers("sandip", { start: row * 9 + 1, end: row * 9 + 8 }), frameRate: 10, repeat: -1 });
+      if (!this.anims.exists(`walk-${direction}`)) this.anims.create({ key: `walk-${direction}`, frames: this.anims.generateFrameNumbers("sandip", { start: row * 8, end: row * 8 + 7 }), frameRate: 10, repeat: -1 });
+      if (!this.anims.exists(`idle-${direction}`)) this.anims.create({ key: `idle-${direction}`, frames: this.anims.generateFrameNumbers("sandip-idle", { start: row * 4, end: row * 4 + 3 }), frameRate: 3, repeat: -1 });
     });
-    if (!this.anims.exists("wave-south")) this.anims.create({ key: "wave-south", frames: this.anims.generateFrameNumbers("sandip", { start: 72, end: 77 }), frameRate: 8, repeat: 1 });
-    if (!this.anims.exists("sit-south")) this.anims.create({ key: "sit-south", frames: this.anims.generateFrameNumbers("sandip", { start: 81, end: 89 }), frameRate: 3, repeat: -1 });
+    if (!this.anims.exists("wave-south")) this.anims.create({ key: "wave-south", frames: this.anims.generateFrameNumbers("sandip-wave", { start: 0, end: 9 }), frameRate: 8, repeat: 0 });
+    if (!this.anims.exists("sit-south")) this.anims.create({ key: "sit-south", frames: this.anims.generateFrameNumbers("sandip-sit", { start: 0, end: 3 }), frameRate: 3, repeat: -1 });
   }
 
   private buildVillage() {
@@ -137,17 +141,17 @@ export class WorldScene extends Phaser.Scene {
   private renderBuilding(x:number,y:number,id:DestinationId,title:string,doorX:number,doorY:number,doorAngle:number) {
     const destination = destinations.find((item)=>item.id===id)!;
     const accent = Phaser.Display.Color.HexStringToColor(destination.accent).color;
-    const doorRotation=doorAngle-90;
     const awayX=(x-32*TILE-8)/TILE,awayY=(y-24*TILE-8)/TILE,awayLength=Math.hypot(awayX,awayY)||1;
-    this.add.image(x+(awayX/awayLength)*6,y+(awayY/awayLength)*6,`building-${id}`).setAngle(doorRotation).setTint(0x14202a).setAlpha(.4).setDepth(y+43);
-    this.add.image(x,y,`building-${id}`).setAngle(doorRotation).setTint(0xfff1c7).setDepth(y+45);
-    const portal=this.add.rectangle(doorX,doorY,18,30,0x8129c7,.76).setAngle(doorRotation).setStrokeStyle(3,accent).setDepth(y+71);
+    const buildingScale=.7;
+    this.add.image(x+(awayX/awayLength)*8,y+(awayY/awayLength)*8,`building-${id}`).setOrigin(.5,.82).setScale(buildingScale).setTint(0x14202a).setAlpha(.35).setDepth(y+43);
+    this.add.image(x,y,`building-${id}`).setOrigin(.5,.82).setScale(buildingScale).setDepth(y+45);
+    const portal=this.add.rectangle(doorX,doorY,22,36,0x8129c7,.76).setStrokeStyle(3,accent).setDepth(y+71);
     this.tweens.add({targets:portal,alpha:.4,scaleX:.78,duration:700,yoyo:true,repeat:-1,ease:"Sine.easeInOut"});
     const dx=doorX-x,dy=doorY-y,length=Math.hypot(dx,dy),ux=dx/length,uy=dy/length;
     const signX=x-ux*38,signY=y-uy*38,perpX=-uy,perpY=ux;
-    for(const side of [-1,1])this.add.rectangle(signX+perpX*17*side+ux*9,signY+perpY*17*side+uy*9,2,18,0x5b3826).setAngle(doorRotation).setDepth(y+72);
-    this.add.rectangle(signX,signY,64,17,0x241b19,.98).setAngle(doorRotation).setStrokeStyle(2,0xf4d69a).setDepth(1550);
-    this.add.text(signX,signY,title.toUpperCase(),this.textStyle(8,"#fff4cc")).setOrigin(.5).setAngle(doorRotation).setDepth(1551);
+    for(const side of [-1,1])this.add.rectangle(signX+perpX*17*side+ux*9,signY+perpY*17*side+uy*9,2,18,0x5b3826).setDepth(y+72);
+    this.add.rectangle(signX,signY,64,17,0x241b19,.98).setStrokeStyle(2,0xf4d69a).setDepth(1550);
+    this.add.text(signX,signY,title.toUpperCase(),this.textStyle(8,"#fff4cc")).setOrigin(.5).setDepth(1551);
   }
 
   private addScenery() {
@@ -188,8 +192,8 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private createPlayer(x:number,y:number){
-    this.player=this.physics.add.sprite(x,y,"sandip",0).setOrigin(.5,.86).setDepth(1000);
-    this.player.setAlpha(1).setCollideWorldBounds(true).setBodySize(12,8).setOffset(6,23);
+    this.player=this.physics.add.sprite(x,y,"sandip",0).setOrigin(.5,.94).setDepth(1000);
+    this.player.setAlpha(1).setCollideWorldBounds(true).setBodySize(14,8).setOffset(9,38);
     this.physics.add.collider(this.player,this.collisionLayer!);
     this.cameras.main.startFollow(this.player,true,.14,.14);
     // Integer zoom preserves crisp pixels while keeping at least one pentagon vertex
@@ -199,7 +203,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private move(x:number,y:number){ this.player.setVelocity(x,y); this.facing=this.directionFor(x,y); this.player.anims.play(`walk-${this.facing}`,true); }
-  private stop(faceVisitor=true){ this.player.setVelocity(0,0).anims.stop(); if(faceVisitor)this.facing="south"; this.player.setFrame(directions.indexOf(this.facing)*9); }
+  private stop(faceVisitor=true){ this.player.setVelocity(0,0); if(faceVisitor)this.facing="south"; this.player.anims.play(`idle-${this.facing}`,true); }
 
   private resizeCamera(width:number,height:number){
     const zoom = width >= 1500 && height >= 900 ? 3 : 2;
