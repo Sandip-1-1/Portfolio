@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 const root = resolve("public/assets/pixel/approved");
 const expected = {
   "character-walk-8dir.png": [256, 384], "character-idle-8dir.png": [128, 384], "character-wave-south.png": [320, 48],
+  "character-master-v2.png": [32, 48],
   "character-sit-down-south.png": [192, 48], "character-sit-loop-south.png": [128, 48], "character-stand-up-south.png": [192, 48], "character-portal-react.png": [256, 48],
   "island-terrain-tileset.png": [256, 256], "water-animation.png": [128, 32], "foam-animation.png": [128, 32], "island-decoration-tileset.png": [256, 64], "island-tree-tileset.png": [192, 96],
   "closed-island-example.png": [768, 768], "island-collision-preview.png": [768, 768], "portal-transition-frames.png": [512, 64],
