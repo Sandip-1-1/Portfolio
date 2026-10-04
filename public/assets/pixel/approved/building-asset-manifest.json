@@ -1,0 +1,154 @@
+{
+  "manifest_version": "1.1",
+  "buildings": [
+    {
+      "id": "home",
+      "door_facing": "south",
+      "normal_file": "building-home.png",
+      "portal_file": "building-home-portal.png",
+      "shadow_file": "building-home-shadow.png",
+      "collision_mask": "building-home-collision.png",
+      "interaction_mask": "building-home-interaction.png",
+      "sign_file": "sign-home.png",
+      "origin": {
+        "x": 96,
+        "y": 140
+      },
+      "door_center": {
+        "x": 96,
+        "y": 143
+      }
+    },
+    {
+      "id": "about",
+      "door_facing": "southeast",
+      "normal_file": "building-about.png",
+      "portal_file": "building-about-portal.png",
+      "shadow_file": "building-about-shadow.png",
+      "collision_mask": "building-about-collision.png",
+      "interaction_mask": "building-about-interaction.png",
+      "sign_file": "sign-about.png",
+      "origin": {
+        "x": 96,
+        "y": 140
+      },
+      "door_center": {
+        "x": 159,
+        "y": 143
+      }
+    },
+    {
+      "id": "skills",
+      "door_facing": "southwest",
+      "normal_file": "building-skills.png",
+      "portal_file": "building-skills-portal.png",
+      "shadow_file": "building-skills-shadow.png",
+      "collision_mask": "building-skills-collision.png",
+      "interaction_mask": "building-skills-interaction.png",
+      "sign_file": "sign-skills.png",
+      "origin": {
+        "x": 96,
+        "y": 140
+      },
+      "door_center": {
+        "x": 41,
+        "y": 143
+      }
+    },
+    {
+      "id": "projects",
+      "door_facing": "northeast",
+      "normal_file": "building-projects.png",
+      "portal_file": "building-projects-portal.png",
+      "shadow_file": "building-projects-shadow.png",
+      "collision_mask": "building-projects-collision.png",
+      "interaction_mask": "building-projects-interaction.png",
+      "sign_file": "sign-projects.png",
+      "origin": {
+        "x": 96,
+        "y": 140
+      },
+      "door_center": {
+        "x": 159,
+        "y": 62
+      }
+    },
+    {
+      "id": "contact",
+      "door_facing": "northwest",
+      "normal_file": "building-contact.png",
+      "portal_file": "building-contact-portal.png",
+      "shadow_file": "building-contact-shadow.png",
+      "collision_mask": "building-contact-collision.png",
+      "interaction_mask": "building-contact-interaction.png",
+      "sign_file": "sign-contact.png",
+      "origin": {
+        "x": 96,
+        "y": 140
+      },
+      "door_center": {
+        "x": 41,
+        "y": 62
+      }
+    }
+  ],
+  "wayfinding": [
+    {
+      "id": "home-north",
+      "file": "wayfinding-home-north.png",
+      "collision_box": {
+        "x": 28,
+        "y": 22,
+        "width": 8,
+        "height": 40
+      }
+    },
+    {
+      "id": "skills-northeast",
+      "file": "wayfinding-skills-northeast.png",
+      "collision_box": {
+        "x": 28,
+        "y": 22,
+        "width": 8,
+        "height": 40
+      }
+    },
+    {
+      "id": "contact-southeast",
+      "file": "wayfinding-contact-southeast.png",
+      "collision_box": {
+        "x": 28,
+        "y": 22,
+        "width": 8,
+        "height": 40
+      }
+    },
+    {
+      "id": "projects-southwest",
+      "file": "wayfinding-projects-southwest.png",
+      "collision_box": {
+        "x": 28,
+        "y": 22,
+        "width": 8,
+        "height": 40
+      }
+    },
+    {
+      "id": "about-northwest",
+      "file": "wayfinding-about-northwest.png",
+      "collision_box": {
+        "x": 28,
+        "y": 22,
+        "width": 8,
+        "height": 40
+      }
+    }
+  ],
+  "portal": {
+    "transition_file": "portal-transition-frames.png",
+    "frame_width": 64,
+    "frame_height": 64,
+    "frames": 8,
+    "fps": 10
+  }
+}

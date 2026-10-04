@@ -1,0 +1,59 @@
+{
+  "manifest_version": "2.2",
+  "tile_size": 32,
+  "tilesets": {
+    "terrain": "island-terrain-tileset.png",
+    "water_animation": "water-animation.png",
+    "foam_animation": "foam-animation.png",
+    "decorations": "island-decoration-tileset.png",
+    "trees": "island-tree-tileset.png"
+  },
+  "layers": [
+    "ocean",
+    "ocean_animation",
+    "foam",
+    "cliff_base",
+    "cliff_face",
+    "cliff_top",
+    "grass",
+    "paths",
+    "decorations",
+    "player",
+    "foreground"
+  ],
+  "walkable": [
+    "grass:0,0-7,0",
+    "paths:0,1-7,1",
+    "grass_lip:0,2"
+  ],
+  "blocked": [
+    "cliffs:1,2-7,3",
+    "ocean:0,4-7,5",
+    "shoreline:0,6-7,7"
+  ],
+  "animated": [
+    {
+      "file": "water-animation.png",
+      "frames": 4,
+      "fps": 3
+    },
+    {
+      "file": "foam-animation.png",
+      "frames": 4,
+      "fps": 4
+    }
+  ],
+  "collision_rules": {
+    "grass_lip": null,
+    "cliff": "blocked",
+    "foam": "blocked",
+    "ocean": "blocked",
+    "paths": null,
+    "tree_trunk": {
+      "x": 24,
+      "y": 62,
+      "width": 16,
+      "height": 28
+    }
+  }
+}

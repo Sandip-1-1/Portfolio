@@ -30,6 +30,11 @@ provenance.
   build.
 - Walking poses follow general animation principles from Sandro Maglione's
   freely accessible [Pixel art Character Animations guide](https://www.sandromaglione.com/articles/pixel-art-character-animations-guide): opposing arm/leg poses, contact frames, and a one-pixel body bounce. No guide artwork is redistributed.
+- **Approved pixel asset pack** — original project runtime sheets built from
+  Sandip's user-supplied approved design boards and deterministic local source
+  scripts. The reference board is retained under `docs/approved-references/`;
+  only clean raw PNG sheets under `public/assets/pixel/approved/` are intended
+  for runtime use. No Pinterest or paid-pack artwork is copied into this pack.
 
 ## Audio
 
