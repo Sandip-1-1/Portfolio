@@ -12,11 +12,6 @@ provenance.
   <https://forchild.itch.io/village-tileset>. The included files are
   `Outdoor_tileset.png`, `House_tileset.png`, `Trees_and_bushes.png`, and
   `Furniture.png`. See `public/assets/pixel/Forchild/LICENSE.txt`.
-- **16x16 base sprites** — Unnamed. CC0 1.0. Original creator page:
-  <https://opengameart.org/content/16x16-base-sprites>. The earlier reference
-  files are retained under `docs/archive-assets/` but are no longer shipped or
-  used by the website. See
-  `public/assets/pixel/BASE-SPRITE-LICENSE.txt`.
 - **Sandip v3 eight-direction character sheet** — original project artwork
   generated with OpenAI image generation from Sandip's approved avatar, then
   deterministically cropped, alpha-cleaned, nearest-neighbor normalized, and
